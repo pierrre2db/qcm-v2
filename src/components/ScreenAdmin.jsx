@@ -8,8 +8,68 @@ function formatDate(ts) {
   return d.toLocaleDateString('fr-BE', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
+function buildPrompt(sujet, nombre) {
+  const s = sujet || '[SUJET]'
+  const n = nombre || 10
+  return `Génère exactement ${n} questions de quiz sur le sujet "${s}" en utilisant strictement ce template JSON :
+
+{
+  "titre_quiz": "${s}",
+  "questions": [
+    {
+      "id": 1,
+      "difficulte": 3,
+      "question": "Question avec **mots importants** en gras ?",
+      "options": {
+        "A": "Première réponse",
+        "B": "Deuxième réponse",
+        "C": "Troisième réponse",
+        "D": "Quatrième réponse"
+      },
+      "bonne_reponse": "A",
+      "pourquoi": "Explication didactique. Mets en **gras** les points clés.\\n- Point important 1\\n- Point important 2"
+    }
+  ]
+}
+
+Instructions strictes :
+- Génère exactement ${n} questions variées et pertinentes sur "${s}"
+- Utilise **gras** et *italique* pour mettre en évidence les termes importants dans les questions, options et explications
+- La difficulté va de 1 (très facile) à 5 (expert) — varie les niveaux
+- Chaque explication (pourquoi) doit être didactique, détaillée et structurée
+- JSON parfaitement valide obligatoire : les retours à la ligne dans le texte s'écrivent \\n, les guillemets s'échappent \\"
+- Ne génère QUE le JSON brut, sans texte avant ni après, sans balises Markdown \`\`\``
+}
+
+const JSON_FORMAT_EXEMPLE = `{
+  "titre_quiz": "Titre de mon quiz",
+  "questions": [
+    {
+      "id": 1,
+      "difficulte": 3,
+      "question": "Quelle est la température **maximale** de conservation de la viande hachée ?",
+      "options": {
+        "A": "**+2°C** maximum",
+        "B": "+4°C maximum",
+        "C": "+7°C maximum",
+        "D": "+10°C maximum"
+      },
+      "bonne_reponse": "A",
+      "pourquoi": "La viande hachée est **très sensible** aux bactéries.\\n- Température max : **+2°C**\\n- En dessous de 0°C : conservation longue durée"
+    }
+  ]
+}`
+
 export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onBack }) {
   const fileRef = useRef(null)
+
+  // Prompt builder
+  const [sujet, setSujet] = useState('')
+  const [nombre, setNombre] = useState(10)
+  const [promptCopied, setPromptCopied] = useState(false)
+  const [showFormat, setShowFormat] = useState(false)
+
+  // Upload
   const [texte, setTexte] = useState('')
   const [preview, setPreview] = useState(null)
   const [erreur, setErreur] = useState('')
@@ -17,6 +77,17 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onBack }) {
   const [drag, setDrag] = useState(false)
   const [success, setSuccess] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
+
+  async function copyPrompt() {
+    try { await navigator.clipboard.writeText(buildPrompt(sujet, nombre)) } catch {
+      const el = document.createElement('textarea')
+      el.value = buildPrompt(sujet, nombre)
+      document.body.appendChild(el); el.select()
+      document.execCommand('copy'); document.body.removeChild(el)
+    }
+    setPromptCopied(true)
+    setTimeout(() => setPromptCopied(false), 2000)
+  }
 
   function parseAndPreview(text) {
     setErreur(''); setPreview(null); setSuccess(false)
@@ -54,12 +125,8 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onBack }) {
     if (!preview) return
     setLoading(true)
     try {
-      const id = await ajouterQuiz(
-        preview.raw,
-        preview.normalized.meta.title,
-        preview.normalized.questions.length
-      )
-      onQuizAdded({ id, title: preview.normalized.meta.title, questionCount: preview.normalized.questions.length, normalized: preview.normalized })
+      const id = await ajouterQuiz(preview.raw, preview.normalized.meta.title, preview.normalized.questions.length)
+      onQuizAdded({ id, title: preview.normalized.meta.title, questionCount: preview.normalized.questions.length })
       setSuccess(true); setTexte(''); setPreview(null)
     } catch (e) {
       setErreur('Erreur Firestore : ' + e.message)
@@ -70,18 +137,16 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onBack }) {
 
   async function handleSupprimer(id) {
     setDeletingId(id)
-    try {
-      await supprimerQuiz(id)
-      onQuizDeleted(id)
-    } catch (e) {
-      console.error(e)
-    } finally {
-      setDeletingId(null)
-    }
+    try { await supprimerQuiz(id); onQuizDeleted(id) }
+    catch (e) { console.error(e) }
+    finally { setDeletingId(null) }
   }
+
+  const prompt = buildPrompt(sujet, nombre)
 
   return (
     <div className="space-y-6">
+
       {/* Header */}
       <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-md flex items-center justify-between">
         <div>
@@ -96,7 +161,92 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onBack }) {
         </button>
       </div>
 
-      {/* Quiz library */}
+      {/* ── GENERATE WITH CLAUDE ── */}
+      <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-6 rounded-3xl shadow-xl space-y-5 text-white">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-extrabold text-lg">Générer un quiz avec Claude</h3>
+            <p className="text-slate-400 text-xs mt-0.5">Remplis le sujet → copie le prompt → colle dans Claude → récupère le JSON</p>
+          </div>
+          <button
+            onClick={() => setShowFormat(v => !v)}
+            title="Format JSON & exemples"
+            className="bg-white/10 hover:bg-white/20 text-white font-bold w-9 h-9 rounded-xl transition flex items-center justify-center text-sm"
+          >
+            ?
+          </button>
+        </div>
+
+        {/* Format info panel */}
+        {showFormat && (
+          <div className="bg-slate-950/50 rounded-2xl p-4 space-y-3 text-sm">
+            <p className="font-bold text-emerald-400 text-xs uppercase tracking-wider">Format JSON attendu</p>
+            <pre className="text-slate-300 text-xs font-mono whitespace-pre-wrap overflow-auto max-h-64 leading-relaxed">{JSON_FORMAT_EXEMPLE}</pre>
+            <div className="border-t border-white/10 pt-3 space-y-1 text-xs text-slate-400">
+              <p><strong className="text-white">bonne_reponse</strong> : lettre A, B, C ou D</p>
+              <p><strong className="text-white">difficulte</strong> : 1 (facile) → 5 (expert)</p>
+              <p><strong className="text-white">Markdown</strong> : **gras**, *italique*, - listes dans question/options/pourquoi</p>
+              <p><strong className="text-white">Retours à la ligne</strong> : écrire <code className="bg-white/10 px-1 rounded">\n</code> dans les strings JSON</p>
+            </div>
+          </div>
+        )}
+
+        {/* Inputs */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="sm:col-span-2 space-y-1">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Sujet du quiz</label>
+            <input
+              type="text"
+              value={sujet}
+              onChange={e => setSujet(e.target.value)}
+              placeholder="ex: Hygiène alimentaire AFSCA"
+              className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white placeholder-slate-500 font-medium focus:outline-none focus:border-emerald-400 transition text-sm"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Nb questions</label>
+            <input
+              type="number"
+              min={3} max={50}
+              value={nombre}
+              onChange={e => setNombre(Number(e.target.value))}
+              className="w-full px-4 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white font-bold focus:outline-none focus:border-emerald-400 transition text-sm"
+            />
+          </div>
+        </div>
+
+        {/* Prompt preview */}
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Prompt généré</label>
+          <div className="relative">
+            <pre className="bg-slate-950/60 rounded-2xl p-4 text-xs text-slate-300 font-mono whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto custom-scrollbar">{prompt}</pre>
+          </div>
+        </div>
+
+        <button
+          onClick={copyPrompt}
+          className={`w-full font-bold py-3.5 rounded-2xl transition shadow-md flex items-center justify-center space-x-2 text-sm
+            ${promptCopied ? 'bg-emerald-500 text-white' : 'bg-white text-slate-900 hover:bg-slate-100'}`}
+        >
+          {promptCopied ? (
+            <>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+              </svg>
+              <span>Copié !</span>
+            </>
+          ) : (
+            <>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+              <span>Copier le prompt</span>
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* ── QUIZ LIBRARY ── */}
       <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-md space-y-4">
         <h3 className="font-extrabold text-slate-900 text-lg">Quiz disponibles</h3>
         {quizList.length === 0 ? (
@@ -125,10 +275,10 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onBack }) {
         )}
       </div>
 
-      {/* Add quiz */}
+      {/* ── ADD QUIZ ── */}
       <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-md space-y-5">
         <h3 className="font-extrabold text-slate-900 text-lg">Ajouter un quiz</h3>
-        <p className="text-xs text-slate-500">JSON généré par Claude — format <code className="bg-slate-100 px-1 py-0.5 rounded">bonne_reponse</code> ou <code className="bg-slate-100 px-1 py-0.5 rounded">correctIndex</code>.</p>
+        <p className="text-xs text-slate-500">Collez le JSON reçu de Claude, ou glissez le fichier .json.</p>
 
         <div
           onDragOver={e => { e.preventDefault(); setDrag(true) }}
