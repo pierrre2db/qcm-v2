@@ -1,7 +1,6 @@
 /**
- * QCM V2 — Bot emulator test
+ * QCM V2 — Bot emulator test avec tableau de résultats
  * Usage: node test-emulators.mjs <ROOM_CODE>
- * Example: node test-emulators.mjs ABC123
  */
 
 import { chromium, firefox, webkit, devices } from 'playwright'
@@ -11,12 +10,11 @@ const ROOM_CODE = process.argv[2]?.toUpperCase()
 
 if (!ROOM_CODE || ROOM_CODE.length !== 6) {
   console.error('❌  Usage: node test-emulators.mjs <CODE_6_CHARS>')
-  console.error('   Exemple: node test-emulators.mjs ABC123')
   process.exit(1)
 }
 
-// ── Sci-fi players ──────────────────────────────────────────────────────────
-// styleIdx: 0=Robot(bottts-neutral)  1=Emoji(fun-emoji)  2=Pixel(pixel-art)
+const STYLE_LABELS = ['🤖 Robot', '😄 Emoji', '🎮 Pixel']
+
 const PLAYERS = [
   { name: 'Zara-9',      styleIdx: 1, engine: 'chromium', device: 'iPhone 13' },
   { name: 'Kael Voss',   styleIdx: 2, engine: 'chromium', device: 'Pixel 5' },
@@ -33,102 +31,205 @@ const PLAYERS = [
 const ENGINES = { chromium, firefox, webkit }
 
 function log(name, msg) {
-  const time = new Date().toLocaleTimeString('fr-FR')
-  console.log(`[${time}] [${name.padEnd(12)}] ${msg}`)
+  const t = new Date().toLocaleTimeString('fr-FR')
+  console.log(`[${t}] [${name.padEnd(12)}] ${msg}`)
 }
 
-// ── Single player session ───────────────────────────────────────────────────
+// ── Single player ────────────────────────────────────────────────────────────
 async function runPlayer(player, startDelay) {
+  const deviceLabel = player.device || `${player.engine} desktop`
+  const stats = {
+    name: player.name,
+    device: deviceLabel,
+    avatar: STYLE_LABELS[player.styleIdx],
+    joined: false,
+    questions: []   // { q, status: 'answered'|'skipped'|'timeout', optionIdx, ms }
+  }
+
   const engine = ENGINES[player.engine]
   const contextOpts = player.device
     ? { ...devices[player.device] }
     : { viewport: { width: 1280, height: 720 } }
 
-  const browser = await engine.launch({ headless: false, slowMo: 80 })
+  const browser = await engine.launch({ headless: false, slowMo: 60 })
   const ctx = await browser.newContext(contextOpts)
   const page = await ctx.newPage()
 
-  // Stagger joins so dashboard doesn't get slammed at t=0
   await page.waitForTimeout(startDelay)
 
   try {
-    // 1. Navigate — ?room= auto-switches to live mode
-    const url = `${BASE_URL}?room=${ROOM_CODE}`
-    log(player.name, `→ ${url} (${player.device || player.engine + ' desktop'})`)
-    await page.goto(url, { waitUntil: 'networkidle' })
+    log(player.name, `→ ${deviceLabel}`)
+    await page.goto(`${BASE_URL}?room=${ROOM_CODE}`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60000
+    })
 
-    // 2. Enter pseudo
+    // Fill pseudo
     await page.fill('input[placeholder*="Chef_Antoine"]', player.name)
     await page.waitForTimeout(300)
 
-    // 3. Select avatar style (click Nth button in the picker row)
-    //    Picker has 3 buttons side-by-side: 0=Robot 1=Emoji 2=Pixel
-    const avatarBtns = page.locator('label:has-text("Votre Avatar") ~ div button, div:has(label:has-text("Avatar")) button')
-    // Fallback: select by label text presence
-    const styleLabels = ['Robot', 'Emoji', 'Pixel']
-    const styleLabel = styleLabels[player.styleIdx]
-    const styleBtn = page.locator('button', { hasText: styleLabel }).first()
-    await styleBtn.click().catch(async () => {
-      // If text selector fails, click by position in avatar picker
-      const allBtns = page.locator('button').filter({ hasText: /Robot|Emoji|Pixel/ })
-      await allBtns.nth(player.styleIdx).click()
-    })
-    log(player.name, `Avatar: ${styleLabel}`)
-    await page.waitForTimeout(400)
+    // Pick avatar style by label
+    const styleText = ['Robot', 'Emoji', 'Pixel'][player.styleIdx]
+    await page.locator('button', { hasText: styleText }).first().click()
+    await page.waitForTimeout(300)
 
-    // 4. Submit join
+    // Join
     await page.locator('button', { hasText: 'Rejoindre la session' }).click()
-    log(player.name, `Joined ✓ — waiting for game start...`)
+    stats.joined = true
+    log(player.name, `Joined ✓  avatar: ${STYLE_LABELS[player.styleIdx]}`)
 
-    // 5. Loop through questions
+    // ── Question loop ────────────────────────────────────────────────────────
     let qNum = 0
+
     while (true) {
-      // Wait for answer buttons (▲◆●■ shapes) — up to 3 min for teacher to start
-      const timeout = qNum === 0 ? 180_000 : 60_000
-      const answerGrid = page.locator('button[type="button"]').filter({ hasText: /[▲◆●■]/ })
+      // Wait for answer buttons (▲◆●■) — 3 min on first question, 45s after
+      const waitMs = qNum === 0 ? 180_000 : 45_000
+      const answerBtns = page.locator('button[type="button"]').filter({ hasText: /[▲◆●■]/ })
 
       try {
-        await answerGrid.first().waitFor({ state: 'visible', timeout })
+        await answerBtns.first().waitFor({ state: 'visible', timeout: waitMs })
       } catch {
-        log(player.name, 'Session terminée ou timeout — sortie.')
+        log(player.name, 'Session terminée (timeout attente question).')
         break
       }
 
-      // Check buttons are not disabled (new question)
-      const enabled = answerGrid.first().locator(':not([disabled])')
-      await enabled.waitFor({ state: 'attached', timeout: 10_000 }).catch(() => {})
-
-      const count = await answerGrid.count()
-      if (count === 0) { await page.waitForTimeout(2000); continue }
-
-      qNum++
-
-      // Human-like think time: 2–13s
-      const thinkMs = 2000 + Math.floor(Math.random() * 11000)
-      log(player.name, `Q${qNum} — réflexion ${(thinkMs / 1000).toFixed(1)}s...`)
-      await page.waitForTimeout(thinkMs)
-
-      // Click random answer
-      const pick = Math.floor(Math.random() * count)
-      await answerGrid.nth(pick).click({ force: true })
-      log(player.name, `Q${qNum} — répondu (option ${pick + 1}/${count})`)
-
-      // Wait until buttons become disabled (answer locked in)
+      // Make sure buttons are enabled (not a lingering disabled state)
       await page.waitForFunction(
-        () => document.querySelector('button[type="button"][disabled]') !== null,
-        { timeout: 8000 }
+        () => {
+          const btns = [...document.querySelectorAll('button[type="button"]')]
+            .filter(b => /[▲◆●■]/.test(b.textContent) && !b.disabled)
+          return btns.length > 0
+        },
+        { timeout: 5000 }
       ).catch(() => {})
 
-      // Pause before watching for next question
-      await page.waitForTimeout(1500)
+      const count = await answerBtns.count()
+      if (count === 0) { await page.waitForTimeout(1000); continue }
+
+      qNum++
+      const qStart = Date.now()
+
+      // Random think time 2–12s (never more than 28s so we don't hit the 30s timer)
+      const thinkMs = 2000 + Math.floor(Math.random() * 10000)
+      log(player.name, `Q${qNum} — réflexion ${(thinkMs / 1000).toFixed(1)}s...`)
+
+      // Race: think timer vs buttons disappearing (teacher skipped)
+      const pick = Math.floor(Math.random() * count)
+
+      const answered = await Promise.race([
+        // Path A: think time elapsed → click answer
+        page.waitForTimeout(thinkMs).then(async () => {
+          const stillEnabled = await answerBtns.nth(pick).isEnabled().catch(() => false)
+          if (!stillEnabled) return 'skipped'
+          await answerBtns.nth(pick).click({ force: true }).catch(() => {})
+          return 'answered'
+        }),
+        // Path B: buttons vanish → teacher advanced
+        page.waitForFunction(
+          () => {
+            const btns = [...document.querySelectorAll('button[type="button"]')]
+              .filter(b => /[▲◆●■]/.test(b.textContent))
+            return btns.length === 0
+          },
+          { timeout: 35_000 }
+        ).then(() => 'skipped').catch(() => 'timeout')
+      ])
+
+      const ms = Date.now() - qStart
+      stats.questions.push({ q: qNum, status: answered, optionIdx: pick, ms })
+
+      const emoji = answered === 'answered' ? '✓' : answered === 'skipped' ? '⏭ skipped' : '⏱ timeout'
+      log(player.name, `Q${qNum} — ${emoji}  (${(ms / 1000).toFixed(1)}s)`)
+
+      await page.waitForTimeout(1000)
     }
 
   } catch (err) {
-    log(player.name, `⚠ Erreur: ${err.message.slice(0, 80)}`)
+    log(player.name, `⚠ ${err.message.slice(0, 80)}`)
   } finally {
-    await page.waitForTimeout(3000) // Leave window open briefly to see final state
+    await page.waitForTimeout(2000)
     await browser.close()
-    log(player.name, 'Navigateur fermé.')
+  }
+
+  return stats
+}
+
+// ── Results table ────────────────────────────────────────────────────────────
+function printResults(results) {
+  console.log('\n')
+  console.log('═'.repeat(90))
+  console.log('  RÉSULTATS DU TEST')
+  console.log('═'.repeat(90))
+
+  // Per-player detail
+  const maxQ = Math.max(...results.map(r => r.questions.length), 0)
+
+  // Header
+  const nameW = 14, devW = 22, avW = 10
+  console.log(
+    '\n' +
+    'Joueur'.padEnd(nameW) +
+    'Appareil'.padEnd(devW) +
+    'Avatar'.padEnd(avW) +
+    'Joint'.padEnd(7) +
+    'Répondu'.padEnd(10) +
+    'Skipped'.padEnd(10) +
+    'Moy. temps'
+  )
+  console.log('─'.repeat(90))
+
+  for (const r of results) {
+    const answered = r.questions.filter(q => q.status === 'answered').length
+    const skipped  = r.questions.filter(q => q.status === 'skipped').length
+    const times    = r.questions.filter(q => q.status === 'answered').map(q => q.ms)
+    const avgMs    = times.length > 0 ? (times.reduce((a, b) => a + b, 0) / times.length / 1000).toFixed(1) : '—'
+
+    console.log(
+      r.name.padEnd(nameW) +
+      r.device.padEnd(devW) +
+      r.avatar.padEnd(avW) +
+      (r.joined ? '✓' : '✗').padEnd(7) +
+      `${answered}/${r.questions.length}`.padEnd(10) +
+      String(skipped).padEnd(10) +
+      (avgMs !== '—' ? `${avgMs}s` : '—')
+    )
+  }
+
+  console.log('─'.repeat(90))
+
+  // Summary
+  const totalJoined   = results.filter(r => r.joined).length
+  const totalAnswered = results.reduce((s, r) => s + r.questions.filter(q => q.status === 'answered').length, 0)
+  const totalSkipped  = results.reduce((s, r) => s + r.questions.filter(q => q.status === 'skipped').length, 0)
+  const totalQ        = results.reduce((s, r) => s + r.questions.length, 0)
+
+  console.log(
+    'TOTAL'.padEnd(nameW) +
+    ''.padEnd(devW) +
+    ''.padEnd(avW) +
+    `${totalJoined}/10`.padEnd(7) +
+    `${totalAnswered}/${totalQ}`.padEnd(10) +
+    String(totalSkipped).padEnd(10)
+  )
+  console.log('═'.repeat(90))
+
+  // Per-question breakdown
+  if (maxQ > 0) {
+    console.log('\n  DÉTAIL PAR QUESTION\n')
+    console.log('Q'.padEnd(5) + results.map(r => r.name.slice(0, 8).padEnd(10)).join(''))
+    console.log('─'.repeat(5 + results.length * 10))
+    for (let q = 1; q <= maxQ; q++) {
+      const row = results.map(r => {
+        const entry = r.questions.find(x => x.q === q)
+        if (!entry) return '—'.padEnd(10)
+        if (entry.status === 'answered') return `✓ ${(entry.ms/1000).toFixed(1)}s`.padEnd(10)
+        if (entry.status === 'skipped')  return '⏭'.padEnd(10)
+        return '⏱'.padEnd(10)
+      }).join('')
+      console.log(`Q${q}`.padEnd(5) + row)
+    }
+    console.log('─'.repeat(5 + results.length * 10))
+    console.log('\n  ✓ répondu   ⏭ skipped (avancé trop vite)   ⏱ timeout\n')
   }
 }
 
@@ -138,23 +239,27 @@ async function main() {
   console.log(`║  QCM V2 — Bot Test  |  Room: ${ROOM_CODE}                ║`)
   console.log(`║  ${PLAYERS.length} joueurs  |  ${BASE_URL}  ║`)
   console.log('╚══════════════════════════════════════════════════════╝\n')
-  console.log('Joueurs:')
   PLAYERS.forEach((p, i) => {
-    const style = ['🤖 Robot', '😄 Emoji', '🎮 Pixel'][p.styleIdx]
-    console.log(`  ${i + 1}. ${p.name.padEnd(13)} ${style}  ${p.device || p.engine + ' desktop'}`)
+    console.log(`  ${i + 1}. ${p.name.padEnd(13)} ${STYLE_LABELS[p.styleIdx]}  ${p.device || p.engine + ' desktop'}`)
   })
   console.log('\nLancement dans 2s...\n')
   await new Promise(r => setTimeout(r, 2000))
 
-  // Stagger: 0.5s between each player (5s total spread)
-  await Promise.allSettled(
+  const results = await Promise.allSettled(
     PLAYERS.map((player, i) => runPlayer(player, i * 500))
   )
 
-  console.log('\n✅ Tous les bots ont terminé.')
+  const finalResults = results.map((r, i) =>
+    r.status === 'fulfilled' ? r.value : {
+      name: PLAYERS[i].name,
+      device: PLAYERS[i].device || `${PLAYERS[i].engine} desktop`,
+      avatar: STYLE_LABELS[PLAYERS[i].styleIdx],
+      joined: false,
+      questions: []
+    }
+  )
+
+  printResults(finalResults)
 }
 
-main().catch(err => {
-  console.error('Fatal:', err)
-  process.exit(1)
-})
+main().catch(err => { console.error('Fatal:', err); process.exit(1) })
