@@ -3,12 +3,13 @@ import { getAvatarUrl, getInitials } from '../lib/avatars'
 
 function PlayerChip({ joueur }) {
   const name = joueur.prenom || joueur.username || '?'
+  const style = joueur.styleAvatar
   const [imgOk, setImgOk] = useState(true)
   return (
     <div className="flex flex-col items-center gap-1">
       <div className="w-12 h-12 rounded-full overflow-hidden shadow-lg ring-2 ring-white/30">
         {imgOk ? (
-          <img src={getAvatarUrl(name)} alt={getInitials(name)} onError={() => setImgOk(false)} className="w-full h-full object-cover bg-white/10" />
+          <img src={getAvatarUrl(name, style)} alt={getInitials(name)} onError={() => setImgOk(false)} className="w-full h-full object-cover bg-white/10" />
         ) : (
           <div className="w-full h-full bg-white/20 flex items-center justify-center font-black text-sm text-white">{getInitials(name)}</div>
         )}

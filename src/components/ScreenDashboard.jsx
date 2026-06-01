@@ -76,12 +76,13 @@ export function ScreenDashboard({ roomCode, players, totalQuestions, salon, curr
   // ── Avatar components ─────────────────────────────────────────────────────
   function LobbyAvatar({ player }) {
     const name = player.prenom || player.username || '?'
+    const style = player.styleAvatar
     const [imgOk, setImgOk] = useState(true)
     return (
       <div className="flex flex-col items-center gap-1">
         <div className="w-12 h-12 rounded-full overflow-hidden shadow-md ring-2 ring-emerald-200">
           {imgOk ? (
-            <img src={getAvatarUrl(name)} alt={getInitials(name)} onError={() => setImgOk(false)} className="w-full h-full object-cover bg-slate-100" />
+            <img src={getAvatarUrl(name, style)} alt={getInitials(name)} onError={() => setImgOk(false)} className="w-full h-full object-cover bg-slate-100" />
           ) : (
             <div className="w-full h-full bg-slate-400 flex items-center justify-center font-black text-sm text-white">{getInitials(name)}</div>
           )}
@@ -93,6 +94,7 @@ export function ScreenDashboard({ roomCode, players, totalQuestions, salon, curr
 
   function PlayerAvatar({ player, index, aRepondu, estCorrect }) {
     const name = player.prenom || player.username || '?'
+    const style = player.styleAvatar
     const [imgOk, setImgOk] = useState(true)
     return (
       <div className="flex flex-col items-center gap-1">
@@ -100,7 +102,7 @@ export function ScreenDashboard({ roomCode, players, totalQuestions, salon, curr
           ${!aRepondu ? 'opacity-35 grayscale' : estCorrect ? 'ring-[3px] ring-emerald-400 shadow-emerald-200' : 'ring-[3px] ring-rose-400 shadow-rose-200'}`}>
           {imgOk ? (
             <img
-              src={getAvatarUrl(name)}
+              src={getAvatarUrl(name, style)}
               alt={getInitials(name)}
               onError={() => setImgOk(false)}
               className="w-full h-full object-cover bg-slate-100"

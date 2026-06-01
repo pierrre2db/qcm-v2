@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import QRious from 'qrious'
 import { isFirebaseConfigured } from '../lib/firebase'
+import { AVATAR_STYLES, getAvatarUrl, getInitials, loadSavedStyle, saveStyle } from '../lib/avatars'
 
 function escapeHtml(text) {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -12,6 +13,8 @@ export function ScreenWelcome({ meta, onJoin, onCreateSession, leaderboard, onAd
   const [roomCode, setRoomCode] = useState('')
   const [error, setError] = useState('')
   const [mode, setMode] = useState('solo') // 'solo' | 'live'
+  const [avatarStyle, setAvatarStyle] = useState(loadSavedStyle)
+  const [avatarImgOk, setAvatarImgOk] = useState({ 'bottts-neutral': true, 'fun-emoji': true, 'pixel-art-neutral': true })
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
@@ -40,7 +43,13 @@ export function ScreenWelcome({ meta, onJoin, onCreateSession, leaderboard, onAd
       return
     }
     setError('')
-    onJoin(username.trim(), mode === 'live' ? roomCode.trim().toUpperCase() : '')
+    saveStyle(avatarStyle)
+    onJoin(username.trim(), mode === 'live' ? roomCode.trim().toUpperCase() : '', avatarStyle)
+  }
+
+  function pickStyle(id) {
+    setAvatarStyle(id)
+    saveStyle(id)
   }
 
   function handleKeyDown(e) {
@@ -114,6 +123,43 @@ export function ScreenWelcome({ meta, onJoin, onCreateSession, leaderboard, onAd
               autoFocus
               className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-medium text-slate-800 transition"
             />
+          </div>
+
+          {/* Avatar style picker */}
+          <div className="space-y-2">
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider">Votre Avatar</label>
+            <div className="flex gap-3">
+              {AVATAR_STYLES.map(s => {
+                const seed = username.trim() || 'preview'
+                const selected = avatarStyle === s.id
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => pickStyle(s.id)}
+                    className={`flex flex-col items-center gap-1.5 p-2 rounded-2xl border-2 transition-all flex-1
+                      ${selected ? 'border-emerald-500 bg-emerald-50 shadow-md shadow-emerald-100' : 'border-slate-200 bg-slate-50 hover:border-slate-300'}`}
+                  >
+                    <div className={`w-14 h-14 rounded-full overflow-hidden shadow-sm ${selected ? 'ring-2 ring-emerald-400 ring-offset-1' : ''}`}>
+                      {avatarImgOk[s.id] ? (
+                        <img
+                          src={getAvatarUrl(seed, s.id)}
+                          alt={s.label}
+                          key={seed + s.id}
+                          onError={() => setAvatarImgOk(prev => ({ ...prev, [s.id]: false }))}
+                          className="w-full h-full object-cover bg-slate-100"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-slate-200 flex items-center justify-center text-lg">{s.emoji}</div>
+                      )}
+                    </div>
+                    <span className={`text-[10px] font-bold uppercase tracking-wide ${selected ? 'text-emerald-700' : 'text-slate-400'}`}>
+                      {s.emoji} {s.label}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
           {/* Quiz selector — solo only */}

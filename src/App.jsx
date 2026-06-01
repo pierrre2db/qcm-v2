@@ -149,7 +149,7 @@ export default function App() {
   }, [live.salon])
 
   // ── SOLO ────────────────────────────────────────────────────────────────
-  async function handleJoin(name, code) {
+  async function handleJoin(name, code, avatarStyle) {
     setUsername(name)
     quiz.reset()
 
@@ -166,7 +166,7 @@ export default function App() {
         if (quizDoc?.rawData) { setQuizData(normalizeQuiz(quizDoc.rawData)); quiz.reset() }
       }
       setRoomId(code)
-      await inscrireJoueur(code, userId, name)
+      await inscrireJoueur(code, userId, name, avatarStyle)
       setScreen(S.LOBBY)
       return
     }

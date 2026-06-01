@@ -73,10 +73,11 @@ export function abonnerSalon(codeS, callback) {
 
 // ── JOUEURS ────────────────────────────────────────────────────────────────
 
-export async function inscrireJoueur(codeS, idUtilisateur, prenom) {
+export async function inscrireJoueur(codeS, idUtilisateur, prenom, styleAvatar) {
   if (!isFirebaseConfigured || !db) return
   await setDoc(doc(db, 'rooms', codeS, 'players', idUtilisateur), {
-    idUtilisateur, prenom, reponses: {}, score: 0,
+    idUtilisateur, prenom, styleAvatar: styleAvatar || 'bottts-neutral',
+    reponses: {}, score: 0,
     statut: 'attente', groupe: 'En attente', tempsPasse: '00:00',
     derniereMiseAJour: serverTimestamp()
   })
