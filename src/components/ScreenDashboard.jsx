@@ -3,7 +3,26 @@ import QRious from 'qrious'
 
 const DUREE_QUESTION = 30
 
-export function ScreenDashboard({ roomCode, players, totalQuestions, salon, currentCorrectIndex, onLancer, onQuestionSuivante, onTerminer, onClose }) {
+const ANSWER_COLORS = [
+  { bg: 'bg-[#E21B3C]', text: 'text-white', shape: '▲', label: 'A' },
+  { bg: 'bg-[#1368CE]', text: 'text-white', shape: '◆', label: 'B' },
+  { bg: 'bg-[#D89E00]', text: 'text-white', shape: '●', label: 'C' },
+  { bg: 'bg-[#26890C]', text: 'text-white', shape: '■', label: 'D' },
+]
+
+function getInitials(name) {
+  const clean = (name || '?').trim()
+  const words = clean.split(/[\s\-_]+/).filter(Boolean)
+  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase()
+  return clean.slice(0, 2).toUpperCase()
+}
+
+const AVATAR_BG = [
+  'bg-violet-500', 'bg-cyan-500', 'bg-orange-500', 'bg-pink-500',
+  'bg-indigo-500', 'bg-teal-500', 'bg-amber-500', 'bg-lime-600',
+]
+
+export function ScreenDashboard({ roomCode, players, totalQuestions, salon, currentQuestion, currentCorrectIndex, onLancer, onQuestionSuivante, onTerminer, onClose }) {
   const qrRef = useRef(null)
   const [secondes, setSecondes] = useState(DUREE_QUESTION)
   const [autoAvanceDeclenche, setAutoAvanceDeclenche] = useState(false)
@@ -19,7 +38,7 @@ export function ScreenDashboard({ roomCode, players, totalQuestions, salon, curr
 
   useEffect(() => {
     if (!qrRef.current) return
-    const size = estLobby ? 280 : 160
+    const size = estLobby ? 280 : 140
     new QRious({ element: qrRef.current, value: joinUrl, size, background: '#ffffff', foreground: '#059669', level: 'H' })
   }, [roomCode, estLobby])
 
@@ -50,7 +69,12 @@ export function ScreenDashboard({ roomCode, players, totalQuestions, salon, curr
     : '--'
 
   const pctTimer = (secondes / DUREE_QUESTION) * 100
-  const couleurTimer = secondes > 30 ? 'bg-emerald-500' : secondes > 10 ? 'bg-amber-500' : 'bg-rose-500'
+  const couleurTimer = secondes > 15 ? 'bg-emerald-500' : secondes > 8 ? 'bg-amber-500' : 'bg-rose-500'
+
+  // Circular SVG timer
+  const RADIUS = 28
+  const CIRCUMFERENCE = 2 * Math.PI * RADIUS
+  const timerStrokeColor = secondes > 15 ? '#10b981' : secondes > 8 ? '#f59e0b' : '#f87171'
 
   async function copyLink() {
     try { await navigator.clipboard.writeText(joinUrl) } catch {
@@ -58,6 +82,29 @@ export function ScreenDashboard({ roomCode, players, totalQuestions, salon, curr
       el.value = joinUrl; document.body.appendChild(el); el.select()
       document.execCommand('copy'); document.body.removeChild(el)
     }
+  }
+
+  // ── Avatar component ──────────────────────────────────────────────────────
+  function PlayerAvatar({ player, index, reponse, aRepondu, estCorrect }) {
+    const initials = getInitials(player.prenom || player.username)
+    const baseBg = AVATAR_BG[index % AVATAR_BG.length]
+    return (
+      <div className="flex flex-col items-center gap-1">
+        <div className={`relative w-11 h-11 rounded-full flex items-center justify-center font-black text-sm text-white shadow-md transition-all duration-300
+          ${!aRepondu ? baseBg + ' opacity-40' : estCorrect ? 'bg-emerald-500 ring-2 ring-emerald-300' : 'bg-rose-500 ring-2 ring-rose-300'}`}>
+          {initials}
+          {aRepondu && (
+            <span className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black
+              ${estCorrect ? 'bg-white text-emerald-600' : 'bg-white text-rose-600'}`}>
+              {estCorrect ? '✓' : '✗'}
+            </span>
+          )}
+        </div>
+        <span className="text-[9px] text-slate-500 font-semibold max-w-[44px] truncate text-center">
+          {player.prenom || player.username || '?'}
+        </span>
+      </div>
+    )
   }
 
   // ── LOBBY ────────────────────────────────────────────────────────────────
@@ -81,7 +128,6 @@ export function ScreenDashboard({ roomCode, players, totalQuestions, salon, curr
 
           {/* Main content: QR + code */}
           <div className="p-8 flex flex-col md:flex-row items-center gap-8">
-            {/* QR Code block */}
             <div className="flex flex-col items-center space-y-4 shrink-0">
               <div className="bg-white p-4 rounded-2xl border-2 border-emerald-100 shadow-lg">
                 <canvas ref={qrRef} className="block rounded-xl" />
@@ -89,7 +135,6 @@ export function ScreenDashboard({ roomCode, players, totalQuestions, salon, curr
               <p className="text-xs text-slate-400 font-semibold uppercase tracking-widest">Scanner pour rejoindre</p>
             </div>
 
-            {/* Code + URL + actions */}
             <div className="flex-1 space-y-6 text-center md:text-left">
               <div>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Code de Session</p>
@@ -123,18 +168,23 @@ export function ScreenDashboard({ roomCode, players, totalQuestions, salon, curr
           </div>
         </div>
 
-        {/* Players list */}
+        {/* Players avatars */}
         {players.length > 0 && (
           <div className="bg-white rounded-3xl border border-slate-100 shadow-md overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
+            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
               <h3 className="font-extrabold text-slate-900">Joueurs connectés</h3>
+              <span className="bg-emerald-100 text-emerald-700 text-xs font-black px-2.5 py-1 rounded-full">{players.length}</span>
             </div>
-            <div className="p-4 flex flex-wrap gap-2">
+            <div className="p-5 flex flex-wrap gap-4">
               {players.map((p, i) => (
-                <span key={p.idUtilisateur || i} className="bg-emerald-50 text-emerald-800 font-semibold text-sm px-3 py-1.5 rounded-full flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  {p.prenom || p.username || '?'}
-                </span>
+                <div key={p.idUtilisateur || i} className="flex flex-col items-center gap-1">
+                  <div className={`w-11 h-11 rounded-full flex items-center justify-center font-black text-sm text-white shadow-md ${AVATAR_BG[i % AVATAR_BG.length]}`}>
+                    {getInitials(p.prenom || p.username)}
+                  </div>
+                  <span className="text-[9px] text-slate-500 font-semibold max-w-[44px] truncate text-center">
+                    {p.prenom || p.username || '?'}
+                  </span>
+                </div>
               ))}
             </div>
           </div>
@@ -146,92 +196,136 @@ export function ScreenDashboard({ roomCode, players, totalQuestions, salon, curr
   // ── EN COURS ─────────────────────────────────────────────────────────────
   if (estEnCours) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4">
+
+        {/* Header bar */}
         <div className="bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden">
-          <div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-4 flex items-center justify-between">
-            <span className="text-white font-bold">Question {indiceQuestion + 1} / {totalQuestions}</span>
-            <span className={`font-black text-xl ${secondes <= 10 ? 'text-rose-300 animate-pulse' : 'text-white'}`}>{secondes}s</span>
+          <div className="bg-gradient-to-r from-[#46178F] to-[#3b1278] px-5 py-3 flex items-center justify-between">
+            <span className="text-white font-bold text-sm">Question {indiceQuestion + 1} / {totalQuestions}</span>
+            {/* Circular timer */}
+            <div className="relative flex items-center justify-center" style={{ width: 64, height: 64 }}>
+              <svg width="64" height="64" className="-rotate-90">
+                <circle cx="32" cy="32" r={RADIUS} fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="5" />
+                <circle
+                  cx="32" cy="32" r={RADIUS}
+                  fill="none"
+                  stroke={timerStrokeColor}
+                  strokeWidth="5"
+                  strokeLinecap="round"
+                  strokeDasharray={CIRCUMFERENCE}
+                  strokeDashoffset={CIRCUMFERENCE * (1 - pctTimer / 100)}
+                  style={{ transition: 'stroke-dashoffset 0.5s linear, stroke 0.5s' }}
+                />
+              </svg>
+              <span className={`absolute font-black text-base text-white ${secondes <= 8 ? 'animate-pulse' : ''}`}>
+                {secondes}
+              </span>
+            </div>
           </div>
 
-          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-            {/* QR + code — toujours visible pour retardataires */}
-            <div className="flex items-center gap-4">
-              <div className="bg-white p-2 rounded-xl border border-slate-100 shadow shrink-0">
-                <canvas ref={qrRef} className="block rounded-lg" />
-              </div>
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Code</p>
-                <span className="text-3xl font-black tracking-widest text-emerald-600">{roomCode}</span>
-                <p className="text-[10px] text-slate-400 mt-1 font-mono break-all">{joinUrl}</p>
-              </div>
+          {/* Question text */}
+          {currentQuestion && (
+            <div className="px-5 py-4 border-b border-slate-100">
+              <p className="text-slate-900 font-extrabold text-base md:text-lg leading-snug text-center">
+                {currentQuestion.question}
+              </p>
+            </div>
+          )}
+
+          {/* Answer options */}
+          {currentQuestion?.options && (
+            <div className="p-4 grid grid-cols-2 gap-2">
+              {currentQuestion.options.map((opt, idx) => {
+                const c = ANSWER_COLORS[idx] || ANSWER_COLORS[0]
+                const isCorrect = idx === currentCorrectIndex
+                return (
+                  <div key={idx} className={`${c.bg} rounded-xl px-3 py-2.5 flex items-center gap-2
+                    ${isCorrect ? 'ring-2 ring-white ring-offset-1 shadow-lg' : 'opacity-80'}`}>
+                    <span className="text-white/80 font-black text-base shrink-0">{c.shape}</span>
+                    <span className="text-white font-semibold text-xs flex-1 leading-tight">{opt}</span>
+                    {isCorrect && <span className="text-white font-black text-sm shrink-0">✓</span>}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Stats + controls */}
+          <div className="px-5 pb-5 space-y-3">
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { label: 'Répondu', value: `${nbARepondu}/${players.length}` },
+                { label: 'Score moy.', value: `${average}` },
+                { label: 'Terminés', value: completedCount },
+              ].map(({ label, value }) => (
+                <div key={label} className="bg-slate-50 rounded-2xl p-3 text-center border border-slate-100">
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">{label}</span>
+                  <span className="text-xl font-extrabold text-slate-900">{value}</span>
+                </div>
+              ))}
             </div>
 
-            {/* Stats + contrôles */}
-            <div className="space-y-4">
-              <div className="space-y-1.5">
-                <div className="flex justify-between text-xs font-semibold text-slate-500">
-                  <span>Temps restant</span>
-                  <span className={secondes <= 10 ? 'text-rose-500 font-black' : ''}>{secondes}s</span>
-                </div>
-                <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden">
-                  <div className={`${couleurTimer} h-full transition-all duration-500`} style={{ width: `${pctTimer}%` }} />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { label: 'Répondu', value: `${nbARepondu}/${players.length}` },
-                  { label: 'Score moy.', value: `${average}` },
-                  { label: 'Terminés', value: completedCount },
-                ].map(({ label, value }) => (
-                  <div key={label} className="bg-slate-50 rounded-2xl p-3 text-center border border-slate-100">
-                    <span className="text-[10px] text-slate-400 font-bold uppercase block">{label}</span>
-                    <span className="text-xl font-extrabold text-slate-900">{value}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => onQuestionSuivante(indiceQuestion + 1)}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-4 rounded-xl transition shadow-md"
-                >
-                  {indiceQuestion + 1 >= totalQuestions ? 'Terminer la partie' : 'Question suivante →'}
-                </button>
-                <button
-                  onClick={onTerminer}
-                  className="bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold py-3 px-4 rounded-xl transition text-sm"
-                >
-                  Arrêter
-                </button>
-              </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => onQuestionSuivante(indiceQuestion + 1)}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-4 rounded-xl transition shadow-md"
+              >
+                {indiceQuestion + 1 >= totalQuestions ? 'Terminer la partie' : 'Question suivante →'}
+              </button>
+              <button
+                onClick={onTerminer}
+                className="bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold py-3 px-4 rounded-xl transition text-sm"
+              >
+                Arrêter
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Player status grid */}
+        {/* Player avatar grid */}
         {players.length > 0 && (
           <div className="bg-white rounded-3xl border border-slate-100 shadow-md overflow-hidden">
             <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-              <h3 className="font-bold text-slate-800 text-sm">Réponses en temps réel</h3>
-              <span className="text-xs text-slate-500">{nbARepondu}/{players.length}</span>
+              <h3 className="font-bold text-slate-800 text-sm">Joueurs</h3>
+              <div className="flex items-center gap-3 text-xs text-slate-500">
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-slate-300 inline-block" />En attente</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />Correct</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-500 inline-block" />Faux</span>
+                <span className="font-bold text-slate-700">{nbARepondu}/{players.length}</span>
+              </div>
             </div>
-            <div className="p-4 flex flex-wrap gap-2">
+            <div className="p-4 flex flex-wrap gap-3">
               {players.map((p, i) => {
                 const reponse = p.reponses?.[indiceQuestion]
                 const aRepondu = reponse !== undefined
                 const estCorrect = aRepondu && reponse === currentCorrectIndex
                 return (
-                  <span key={p.idUtilisateur || i} className={`font-semibold text-sm px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-colors
-                    ${!aRepondu ? 'bg-slate-100 text-slate-500' : estCorrect ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
-                    <span className={`w-2 h-2 rounded-full ${!aRepondu ? 'bg-slate-400' : estCorrect ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                    {p.prenom || p.username || '?'}
-                  </span>
+                  <PlayerAvatar
+                    key={p.idUtilisateur || i}
+                    player={p}
+                    index={i}
+                    reponse={reponse}
+                    aRepondu={aRepondu}
+                    estCorrect={estCorrect}
+                  />
                 )
               })}
             </div>
           </div>
         )}
+
+        {/* QR + code compact — for latecomers */}
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 py-3 flex items-center gap-4">
+          <div className="bg-white p-1.5 rounded-lg border border-slate-100 shadow-sm shrink-0">
+            <canvas ref={qrRef} className="block rounded" />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Rejoindre</p>
+            <span className="text-2xl font-black tracking-widest text-emerald-600">{roomCode}</span>
+            <p className="text-[10px] text-slate-400 font-mono break-all">{joinUrl}</p>
+          </div>
+        </div>
+
       </div>
     )
   }
@@ -257,6 +351,22 @@ export function ScreenDashboard({ roomCode, players, totalQuestions, salon, curr
             </div>
           ))}
         </div>
+
+        {/* Player avatars final */}
+        {players.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-3 pt-2">
+            {players.map((p, i) => (
+              <div key={p.idUtilisateur || i} className="flex flex-col items-center gap-1">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm text-white shadow-md ${AVATAR_BG[i % AVATAR_BG.length]}`}>
+                  {getInitials(p.prenom || p.username)}
+                </div>
+                <span className="text-[9px] text-slate-500 font-semibold max-w-[40px] truncate text-center">
+                  {p.prenom || p.username || '?'}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="flex gap-3 justify-center">
           {players.length > 0 && (

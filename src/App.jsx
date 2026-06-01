@@ -338,6 +338,7 @@ export default function App() {
             players={livePlayers}
             totalQuestions={questions.length}
             salon={salon}
+            currentQuestion={questions[salon?.questionCourante] ?? null}
             currentCorrectIndex={questions[salon?.questionCourante]?.correctIndex ?? -1}
             onLancer={handleLancer}
             onQuestionSuivante={handleQuestionSuivante}
