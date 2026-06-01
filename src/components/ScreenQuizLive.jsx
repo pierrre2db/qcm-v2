@@ -3,6 +3,13 @@ import { Md } from './Md'
 
 const DUREE_QUESTION = 60
 
+const ANSWER_STYLES = [
+  { bg: 'bg-[#E21B3C]', hover: 'hover:bg-[#c5182f] active:bg-[#a81427]', shadow: 'shadow-[#E21B3C]/40', shape: '▲', label: 'A' },
+  { bg: 'bg-[#1368CE]', hover: 'hover:bg-[#1059b0] active:bg-[#0e4d98]', shadow: 'shadow-[#1368CE]/40', shape: '◆', label: 'B' },
+  { bg: 'bg-[#D89E00]', hover: 'hover:bg-[#b98800] active:bg-[#9c7300]', shadow: 'shadow-[#D89E00]/40', shape: '●', label: 'C' },
+  { bg: 'bg-[#26890C]', hover: 'hover:bg-[#1e6e0a] active:bg-[#185809]', shadow: 'shadow-[#26890C]/40', shape: '■', label: 'D' },
+]
+
 export function ScreenQuizLive({ question, indice, total, questionDemarreeA, onRepondre }) {
   const [selectionne, setSelectionne] = useState(null)
   const [secondesRestantes, setSecondesRestantes] = useState(DUREE_QUESTION)
@@ -33,73 +40,93 @@ export function ScreenQuizLive({ question, indice, total, questionDemarreeA, onR
   }
 
   const pctTimer = (secondesRestantes / DUREE_QUESTION) * 100
-  const couleurTimer = secondesRestantes > 30 ? 'bg-emerald-500' : secondesRestantes > 10 ? 'bg-amber-500' : 'bg-rose-500'
+  const timerColor = secondesRestantes > 30 ? 'bg-emerald-400' : secondesRestantes > 10 ? 'bg-amber-400' : 'bg-rose-400'
+  const timerPulse = secondesRestantes <= 10 ? 'animate-pulse' : ''
 
   return (
-    <div className="space-y-6">
-      {/* Barre progression + timer */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-md space-y-3">
-        <div className="flex justify-between items-center text-xs font-semibold text-slate-500">
-          <span>Question <strong className="text-emerald-600">{indice + 1} / {total}</strong></span>
-          <span className={`font-black text-lg ${secondesRestantes <= 10 ? 'text-rose-500 animate-pulse' : 'text-slate-700'}`}>
+    <div className="space-y-4">
+
+      {/* Timer + progression */}
+      <div className="space-y-2">
+        <div className="flex justify-between items-center">
+          <span className="text-white/70 text-xs font-bold uppercase tracking-widest">
+            Question {indice + 1} / {total}
+          </span>
+          <span className={`font-black text-2xl text-white ${secondesRestantes <= 10 ? 'animate-pulse text-rose-300' : ''}`}>
             {secondesRestantes}s
           </span>
         </div>
-        <div className="space-y-1.5">
-          <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-            <div className="bg-emerald-500 h-full transition-all duration-300"
-              style={{ width: `${((indice + 1) / total) * 100}%` }} />
-          </div>
-          <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-            <div className={`${couleurTimer} h-full transition-all duration-500`}
-              style={{ width: `${pctTimer}%` }} />
-          </div>
+        {/* Overall progress */}
+        <div className="w-full bg-white/20 h-1.5 rounded-full overflow-hidden">
+          <div className="bg-white/60 h-full transition-all duration-500 rounded-full"
+            style={{ width: `${((indice + 1) / total) * 100}%` }} />
+        </div>
+        {/* Timer bar */}
+        <div className="w-full bg-white/20 h-3 rounded-full overflow-hidden">
+          <div className={`${timerColor} ${timerPulse} h-full transition-all duration-500 rounded-full`}
+            style={{ width: `${pctTimer}%` }} />
         </div>
       </div>
 
-      {/* Question */}
-      <div className="bg-white rounded-3xl border border-slate-100 shadow-xl overflow-hidden">
-        <div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-3 flex justify-between items-center">
-          <span className="text-white/90 text-xs font-bold uppercase tracking-wider">{question.category}</span>
-          <span className="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Live</span>
-        </div>
-
-        <div className="p-6 md:p-8 space-y-4">
-          <h3 className="text-lg md:text-xl font-bold text-slate-900 leading-snug"><Md>{question.question}</Md></h3>
-          <div className="grid grid-cols-1 gap-3">
-            {question.options.map((option, idx) => {
-              const estSelectionne = selectionne === idx
-              return (
-                <button
-                  key={idx}
-                  type="button"
-                  disabled={confirme}
-                  onClick={() => handleSelect(idx)}
-                  className={`w-full text-left p-4 rounded-2xl border-2 transition-all flex items-start space-x-3 group
-                    ${estSelectionne
-                      ? 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-500/20'
-                      : confirme
-                      ? 'border-slate-100 bg-slate-50 opacity-50 cursor-default'
-                      : 'border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/20 active:scale-[0.98]'
-                    }`}
-                >
-                  <span className={`flex items-center justify-center w-7 h-7 rounded-lg font-bold text-sm transition-colors uppercase select-none shrink-0
-                    ${estSelectionne ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-emerald-100 group-hover:text-emerald-700'}`}>
-                    {String.fromCharCode(65 + idx)}
-                  </span>
-                  <span className="text-slate-700 font-medium text-sm md:text-base pt-0.5 leading-relaxed"><Md>{option}</Md></span>
-                </button>
-              )
-            })}
+      {/* Question card */}
+      <div className="bg-white rounded-2xl shadow-2xl shadow-black/30 overflow-hidden">
+        {question.category && (
+          <div className="bg-[#3b1278] px-5 py-2 flex justify-between items-center">
+            <span className="text-white/70 text-xs font-bold uppercase tracking-wider">{question.category}</span>
+            <span className="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Live</span>
           </div>
+        )}
+        <div className="px-6 py-5 text-center">
+          <h3 className="text-lg md:text-xl font-extrabold text-slate-900 leading-snug">
+            <Md>{question.question}</Md>
+          </h3>
         </div>
+      </div>
 
-        <div className="bg-slate-50 px-6 py-3 border-t border-slate-100">
-          <p className="text-xs text-slate-400 italic text-center">
-            {confirme ? '✓ Réponse enregistrée — en attente de la prochaine question' : 'Appuyez sur une réponse pour valider.'}
+      {/* Answer grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {question.options.map((option, idx) => {
+          const style = ANSWER_STYLES[idx] || ANSWER_STYLES[0]
+          const estSelectionne = selectionne === idx
+          const estGrise = confirme && !estSelectionne
+
+          return (
+            <button
+              key={idx}
+              type="button"
+              disabled={confirme}
+              onClick={() => handleSelect(idx)}
+              className={`
+                relative w-full text-left p-4 rounded-2xl shadow-lg transition-all duration-150
+                flex items-center gap-3
+                ${style.bg} ${!confirme ? style.hover : ''}
+                ${estSelectionne ? 'ring-4 ring-white scale-[1.02] shadow-2xl' : ''}
+                ${estGrise ? 'opacity-40 scale-[0.97]' : ''}
+                ${!confirme ? 'active:scale-95 cursor-pointer' : 'cursor-default'}
+              `}
+            >
+              <span className="flex items-center justify-center w-9 h-9 rounded-xl bg-black/20 text-white font-black text-base shrink-0">
+                {style.shape}
+              </span>
+              <span className="text-white font-bold text-sm md:text-base leading-snug flex-1">
+                <Md>{option}</Md>
+              </span>
+              {estSelectionne && (
+                <span className="shrink-0 text-white text-xl">✓</span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Status message */}
+      {confirme && (
+        <div className="text-center">
+          <p className="text-white/80 text-sm font-semibold">
+            ✓ Réponse enregistrée — en attente de la prochaine question
           </p>
         </div>
-      </div>
+      )}
     </div>
   )
 }

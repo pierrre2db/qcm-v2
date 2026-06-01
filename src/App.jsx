@@ -255,13 +255,16 @@ export default function App() {
     else setPassError(true)
   }
 
+  const isDark = [S.LOBBY, S.QUIZ_LIVE, S.WAITING].includes(screen)
+
   return (
-    <div className="bg-slate-50 text-slate-800 min-h-screen flex flex-col selection:bg-emerald-500 selection:text-white">
+    <div className={`min-h-screen flex flex-col selection:bg-violet-400 selection:text-white transition-colors duration-300 ${isDark ? 'bg-[#46178F]' : 'bg-slate-50 text-slate-800'}`}>
       <Header
         meta={meta}
         username={username || null}
         isLive={!!roomId && screen !== S.DASHBOARD}
         onLeaveRoom={handleLeaveRoom}
+        isDark={isDark}
       />
 
       <main className="flex-grow max-w-6xl w-full mx-auto px-4 py-6 md:py-10 flex flex-col justify-center">
