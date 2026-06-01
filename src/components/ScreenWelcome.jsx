@@ -6,7 +6,7 @@ function escapeHtml(text) {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
-export function ScreenWelcome({ meta, onJoin, onCreateSession, leaderboard, onAdmin }) {
+export function ScreenWelcome({ meta, onJoin, onCreateSession, leaderboard, onAdmin, quizList, selectedQuizId, onSelectQuiz }) {
   const qrRef = useRef(null)
   const [username, setUsername] = useState('')
   const [roomCode, setRoomCode] = useState('')
@@ -56,6 +56,29 @@ export function ScreenWelcome({ meta, onJoin, onCreateSession, leaderboard, onAd
           Rejoignez le défi lancé par votre professeur ou créez votre propre espace enseignant pour suivre les résultats en direct.
         </p>
       </div>
+
+      {/* Quiz selector — shown if multiple quizzes available */}
+      {quizList && quizList.length > 0 && (
+        <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-md">
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Choisir un quiz</p>
+          <div className="flex flex-wrap gap-2">
+            {quizList.map(q => (
+              <button
+                key={q.id}
+                onClick={() => onSelectQuiz(q.id)}
+                className={`px-4 py-2 rounded-xl text-sm font-semibold transition border-2
+                  ${selectedQuizId === q.id
+                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-md'
+                    : 'bg-white text-slate-600 border-slate-200 hover:border-emerald-300 hover:bg-emerald-50'
+                  }`}
+              >
+                {q.title}
+                <span className="ml-1.5 text-xs opacity-70">{q.questionCount}Q</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch">
         {/* Student section */}

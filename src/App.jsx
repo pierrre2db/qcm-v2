@@ -20,7 +20,7 @@ import {
   creerSalon, inscrireJoueur, lancerPartie,
   passerQuestionSuivante, terminerSalon,
   abonnerSalon, abonnerJoueurs,
-  chargerQuiz
+  listerQuizzes, chargerQuizParId, lireRoom
 } from './lib/firestore'
 
 const S = {
@@ -37,8 +37,8 @@ const S = {
 }
 
 const ADMIN_PASSWORD = '1234'
-
 const LS_KEY = 'qcm_scores'
+const DEFAULT_QUIZ = normalizeQuiz(afscaData)
 
 function getGroupLabel(score, groups) {
   return (groups.find(g => score <= g.maxScore) ?? groups[groups.length - 1]).label
@@ -54,12 +54,13 @@ function saveToLeaderboard(name, score, time, groups) {
 }
 
 export default function App() {
-  const [quizData, setQuizData] = useState(() => normalizeQuiz(afscaData))
+  // ── Quiz library ────────────────────────────────────────────────────────
+  const [quizList, setQuizList] = useState([])
+  const [selectedQuizId, setSelectedQuizId] = useState(null)
+  const [quizData, setQuizData] = useState(DEFAULT_QUIZ)
   const { meta, groups, questions } = quizData
-  const [passInput, setPassInput] = useState('')
-  const [passError, setPassError] = useState(false)
-  const [showPassPrompt, setShowPassPrompt] = useState(false)
 
+  // ── App state ───────────────────────────────────────────────────────────
   const [screen, setScreen] = useState(S.WELCOME)
   const [username, setUsername] = useState('')
   const [roomId, setRoomId] = useState(null)
@@ -67,46 +68,54 @@ export default function App() {
   const [livePlayers, setLivePlayers] = useState([])
   const [salon, setSalon] = useState(null)
   const [finalResult, setFinalResult] = useState(null)
-  const [dernierReponse, setDernierReponse] = useState(null) // { estCorrect, indice }
+  const [dernierReponse, setDernierReponse] = useState(null)
   const [leaderboard, setLeaderboard] = useState(loadLeaderboard)
+  const [passInput, setPassInput] = useState('')
+  const [passError, setPassError] = useState(false)
+  const [showPassPrompt, setShowPassPrompt] = useState(false)
+
   const { message: toastMsg, show: showToast } = useToast()
   const quiz = useQuizStore(questions)
   const live = useLiveQuiz(roomId, userId, questions)
 
+  // ── Init ────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!isFirebaseConfigured) return
     signInAnon().then(user => { if (user) setUserId(user.uid) })
-    chargerQuiz().then(data => { if (data) setQuizData(normalizeQuiz(data)) })
+    listerQuizzes().then(list => {
+      setQuizList(list)
+      if (list.length > 0) setSelectedQuizId(list[0].id)
+    })
   }, [])
 
-  // Abonnement joueurs (dashboard + lobby)
+  // ── Quiz selection ──────────────────────────────────────────────────────
+  async function handleSelectQuiz(id) {
+    setSelectedQuizId(id)
+    const doc = await chargerQuizParId(id)
+    if (doc?.rawData) { setQuizData(normalizeQuiz(doc.rawData)); quiz.reset() }
+  }
+
+  // ── Live subscriptions ──────────────────────────────────────────────────
   useEffect(() => {
     if (!roomId) return
     const unsub = abonnerJoueurs(roomId, setLivePlayers)
     return unsub
   }, [roomId])
 
-  // Abonnement salon (enseignant)
   useEffect(() => {
     if (!roomId || screen !== S.DASHBOARD) return
     const unsub = abonnerSalon(roomId, setSalon)
     return unsub
   }, [roomId, screen])
 
-  // Joueur : réagir aux changements du salon
+  // ── Player: react to salon changes ─────────────────────────────────────
   useEffect(() => {
     if (!live.salon || screen === S.DASHBOARD) return
-    const { statut, questionCourante } = live.salon
-
-    if (statut === 'attente' && screen !== S.LOBBY) {
-      setScreen(S.LOBBY)
-    } else if (statut === 'en-cours') {
-      if (screen === S.LOBBY || screen === S.WAITING) {
-        setScreen(S.QUIZ_LIVE)
-      }
-      if (screen === S.WAITING && !live.aDejaRepondu) {
-        setScreen(S.QUIZ_LIVE)
-      }
+    const { statut } = live.salon
+    if (statut === 'attente' && screen !== S.LOBBY) setScreen(S.LOBBY)
+    else if (statut === 'en-cours') {
+      if (screen === S.LOBBY || screen === S.WAITING) setScreen(S.QUIZ_LIVE)
+      if (screen === S.WAITING && !live.aDejaRepondu) setScreen(S.QUIZ_LIVE)
     } else if (statut === 'termine') {
       const score = live.scoreActuel
       const diff = Math.floor((new Date() - (quiz.startTime || new Date())) / 1000)
@@ -120,7 +129,7 @@ export default function App() {
     }
   }, [live.salon])
 
-  // SOLO
+  // ── SOLO ────────────────────────────────────────────────────────────────
   async function handleJoin(name, code) {
     setUsername(name)
     quiz.reset()
@@ -130,6 +139,12 @@ export default function App() {
         showToast('Firebase non configuré. Mode solo activé.')
         setScreen(S.QUIZ)
         return
+      }
+      // Load the quiz the teacher selected for this room
+      const roomData = await lireRoom(code)
+      if (roomData?.quizId) {
+        const quizDoc = await chargerQuizParId(roomData.quizId)
+        if (quizDoc?.rawData) { setQuizData(normalizeQuiz(quizDoc.rawData)); quiz.reset() }
       }
       setRoomId(code)
       await inscrireJoueur(code, userId, name)
@@ -151,7 +166,7 @@ export default function App() {
     }
   }
 
-  // LIVE — joueur répond
+  // ── LIVE player ─────────────────────────────────────────────────────────
   async function handleReponseLive(indiceChoisi) {
     const res = await live.soumettre(indiceChoisi)
     if (!res) return
@@ -159,7 +174,7 @@ export default function App() {
     setScreen(S.WAITING)
   }
 
-  // ENSEIGNANT — créer session
+  // ── TEACHER ─────────────────────────────────────────────────────────────
   async function handleCreateSession() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
     let code = ''
@@ -167,7 +182,7 @@ export default function App() {
     setRoomId(code)
     setLivePlayers([])
     setSalon({ statut: 'attente', questionCourante: -1 })
-    await creerSalon(code, questions.length)
+    await creerSalon(code, questions.length, selectedQuizId)
     setScreen(S.DASHBOARD)
     showToast(`Salon créé : ${code}`)
   }
@@ -179,11 +194,8 @@ export default function App() {
 
   async function handleQuestionSuivante(prochaineIndex) {
     await passerQuestionSuivante(roomId, prochaineIndex, questions.length)
-    if (prochaineIndex >= questions.length) {
-      setSalon(s => ({ ...s, statut: 'termine' }))
-    } else {
-      setSalon(s => ({ ...s, questionCourante: prochaineIndex }))
-    }
+    if (prochaineIndex >= questions.length) setSalon(s => ({ ...s, statut: 'termine' }))
+    else setSalon(s => ({ ...s, questionCourante: prochaineIndex }))
   }
 
   function handleTerminer() {
@@ -193,41 +205,30 @@ export default function App() {
 
   function handleCloseSession() {
     terminerSalon(roomId).catch(() => {})
-    setRoomId(null)
-    setLivePlayers([])
-    setSalon(null)
+    setRoomId(null); setLivePlayers([]); setSalon(null)
     setScreen(S.WELCOME)
   }
 
   function handleLeaveRoom() {
-    setRoomId(null)
-    quiz.reset()
-    setFinalResult(null)
+    setRoomId(null); quiz.reset(); setFinalResult(null)
     setScreen(S.WELCOME)
     showToast('Vous avez quitté le salon.')
   }
 
+  function handleRestart() {
+    quiz.reset(); setFinalResult(null); setRoomId(null)
+    setScreen(S.WELCOME)
+  }
+
+  // ── Admin / password ────────────────────────────────────────────────────
   function handleAdminAccess() {
-    setPassInput('')
-    setPassError(false)
-    setShowPassPrompt(true)
+    setPassInput(''); setPassError(false); setShowPassPrompt(true)
   }
 
   function handlePassSubmit(e) {
     e.preventDefault()
-    if (passInput === ADMIN_PASSWORD) {
-      setShowPassPrompt(false)
-      setScreen(S.ADMIN)
-    } else {
-      setPassError(true)
-    }
-  }
-
-  function handleRestart() {
-    quiz.reset()
-    setFinalResult(null)
-    setRoomId(null)
-    setScreen(S.WELCOME)
+    if (passInput === ADMIN_PASSWORD) { setShowPassPrompt(false); setScreen(S.ADMIN) }
+    else setPassError(true)
   }
 
   return (
@@ -242,14 +243,15 @@ export default function App() {
       <main className="flex-grow max-w-6xl w-full mx-auto px-4 py-6 md:py-10 flex flex-col justify-center">
 
         {screen === S.WELCOME && (
-          <ScreenWelcome meta={meta} onJoin={handleJoin} onCreateSession={handleCreateSession} leaderboard={leaderboard} onAdmin={handleAdminAccess} />
-        )}
-
-        {screen === S.ADMIN && (
-          <ScreenAdmin
-            currentQuiz={quizData}
-            onQuizLoaded={normalized => { setQuizData(normalized); quiz.reset(); showToast('Quiz chargé !') }}
-            onBack={() => setScreen(S.WELCOME)}
+          <ScreenWelcome
+            meta={meta}
+            onJoin={handleJoin}
+            onCreateSession={handleCreateSession}
+            leaderboard={leaderboard}
+            onAdmin={handleAdminAccess}
+            quizList={quizList}
+            selectedQuizId={selectedQuizId}
+            onSelectQuiz={handleSelectQuiz}
           />
         )}
 
@@ -321,6 +323,18 @@ export default function App() {
             players={livePlayers}
             onBack={() => setScreen(S.DASHBOARD)}
             onClose={handleCloseSession}
+          />
+        )}
+
+        {screen === S.ADMIN && (
+          <ScreenAdmin
+            quizList={quizList}
+            onQuizAdded={({ id, title, questionCount }) => {
+              setQuizList(prev => [{ id, title, questionCount }, ...prev])
+              showToast('Quiz ajouté !')
+            }}
+            onQuizDeleted={id => setQuizList(prev => prev.filter(q => q.id !== id))}
+            onBack={() => setScreen(S.WELCOME)}
           />
         )}
       </main>
