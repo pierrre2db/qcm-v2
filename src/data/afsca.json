@@ -1,0 +1,159 @@
+{
+  "meta": {
+    "title": "Défi Hygiène & Sécurité Alimentaire",
+    "subtitle": "Auto-évaluation & Bonnes Pratiques AFSCA",
+    "badge": "Multi-joueur en temps réel",
+    "theme": "emerald",
+    "icon": "shield",
+    "footer": "© 2026 - Conforme aux exigences de formation de l'AFSCA",
+    "footerLinks": [
+      { "label": "Règlements Belges", "href": "#" },
+      { "label": "Assistance", "href": "#" }
+    ]
+  },
+  "groups": [
+    {
+      "maxScore": 4,
+      "label": "Insuffisant",
+      "color": "red",
+      "title": "Sécurité alimentaire compromise ❌",
+      "feedback": "Vos connaissances actuelles sur les Bonnes Pratiques d'Hygiène (BPH) présentent des lacunes majeures. Lors d'un véritable contrôle AFSCA, ces erreurs pourraient entraîner des sanctions majeures ou des procès-verbaux d'infraction.\n\nRecommandation : Veuillez étudier attentivement les fiches d'autocontrôle belges Horeca ou B2C et retenter le test."
+    },
+    {
+      "maxScore": 8,
+      "label": "Améliorable",
+      "color": "amber",
+      "title": "Bons réflexes, mais perfectible ⚠",
+      "feedback": "Vous maîtrisez l'essentiel des protocoles de base de la chaîne alimentaire. Cependant, des erreurs subsistent sur certains points techniques indispensables (allergènes obligatoires, traçabilité ou températures de refroidissement).\n\nRecommandation : Prenez le temps de revoir la correction détaillée pour valider à 100% votre prochain cours !"
+    },
+    {
+      "maxScore": 999,
+      "label": "Expert",
+      "color": "green",
+      "title": "Maîtrise professionnelle parfaite ! ⭐",
+      "feedback": "Vous faites preuve d'une excellente maîtrise des exigences d'hygiène requises par l'AFSCA. Vos pratiques garantissent une sécurité maximale pour le consommateur final et minimisent les risques microbiologiques."
+    }
+  ],
+  "questions": [
+    {
+      "id": 1,
+      "category": "Températures de conservation",
+      "question": "Quelle est la température maximale réglementaire pour conserver de la viande hachée fraîche ?",
+      "options": [
+        "+2°C maximum (produit ultra-sensible)",
+        "+4°C maximum (norme générale frais)",
+        "+7°C maximum"
+      ],
+      "correctIndex": 0,
+      "explanation": "La viande hachée est un milieu extrêmement favorable au développement bactérien. L'AFSCA impose une température maximale stricte de +2°C lors du stockage professionnel."
+    },
+    {
+      "id": 2,
+      "category": "Hygiène personnelle",
+      "question": "Quel est l'ordre chronologique indispensable pour un lavage efficace des mains en cuisine ?",
+      "options": [
+        "Mouiller, savonner (savon liquide), frotter (30 sec), rincer, sécher avec un essuie-tout jetable.",
+        "Frotter au gel hydroalcoolique directement sans se laver, puis rincer à l'eau.",
+        "Savonner, rincer abondamment, puis s'essuyer sur son tablier de cuisine."
+      ],
+      "correctIndex": 0,
+      "explanation": "Le lavage doit comprendre l'utilisation de savon liquide, un frottage d'au moins 30 secondes et impérativement un séchage avec un papier à usage unique pour éviter les re-contaminations."
+    },
+    {
+      "id": 3,
+      "category": "Allergènes",
+      "question": "Combien d'allergènes majeurs sont soumis à une obligation légale d'affichage pour les consommateurs ?",
+      "options": [
+        "8 allergènes majeurs",
+        "14 allergènes majeurs",
+        "20 allergènes majeurs"
+      ],
+      "correctIndex": 1,
+      "explanation": "La législation européenne (reprise par l'AFSCA) impose l'information obligatoire pour 14 allergènes majeurs (gluten, crustacés, œufs, poissons, lait, moutarde, etc.)."
+    },
+    {
+      "id": 4,
+      "category": "Contamination croisée",
+      "question": "Qu'est-ce que le phénomène de 'contamination croisée' en sécurité alimentaire ?",
+      "options": [
+        "Une réaction chimique nocive lors de la cuisson d'aliments acides.",
+        "Le transfert de bactéries nuisibles d'un aliment contaminé (ex: poulet cru) vers un aliment sain (ex: salade) via des mains ou des outils sales.",
+        "Le croisement d'espèces d'animaux interdites par l'AFSCA."
+      ],
+      "correctIndex": 1,
+      "explanation": "La contamination croisée est l'une des causes principales d'intoxications alimentaires. Elle se prévient par une stricte séparation du cru et du cuit, et un nettoyage rigoureux des surfaces."
+    },
+    {
+      "id": 5,
+      "category": "Principes d'Autocontrôle",
+      "question": "Que signifie concrètement l'acronyme HACCP ?",
+      "options": [
+        "Hygiène Alimentaire Centrale pour les Commerces Publics",
+        "Hazard Analysis Critical Control Point (Analyse des dangers et points critiques pour leur maîtrise)",
+        "Handling And Clean Care Procedure"
+      ],
+      "correctIndex": 1,
+      "explanation": "L'HACCP est la méthode scientifique internationale qui structure tout système d'autocontrôle pour garantir la sécurité microbiologique, physique et chimique des aliments."
+    },
+    {
+      "id": 6,
+      "category": "Hygiène corporelle",
+      "question": "Quelle est la règle concernant le port de bijoux et de vernis à ongles en cuisine professionnelle ?",
+      "options": [
+        "Les bijoux fins et les vernis transparents sont tolérés s'ils sont désinfectés.",
+        "Ils sont strictement interdits (y compris alliances avec reliefs, montres et vernis), car ils abritent des bactéries et peuvent tomber.",
+        "Seul le vernis de couleur foncée est interdit car il peut écailler."
+      ],
+      "correctIndex": 1,
+      "explanation": "Les bijoux et le vernis sont des nids à bactéries physiques et chimiques. Seule l'alliance de mariage parfaitement lisse et sans pierre est tolérée par tolérance administrative dans certains cadres."
+    },
+    {
+      "id": 7,
+      "category": "Chaîne du froid & Refroidissement",
+      "question": "Quel est le délai maximum réglementaire pour refroidir un plat cuisiné chaud de +60°C à +10°C ?",
+      "options": [
+        "Moins de 2 heures",
+        "Moins de 4 heures",
+        "Moins de 6 heures"
+      ],
+      "correctIndex": 0,
+      "explanation": "Le refroidissement rapide doit être accompli en moins de 2 heures pour franchir au plus vite la zone de température critique (entre +10°C et +60°C) où les bactéries se multiplient activement."
+    },
+    {
+      "id": 8,
+      "category": "Contrôle à la réception",
+      "question": "Parmi ces éléments, lequel doit être vérifié en toute priorité lors de la livraison de denrées périssables ?",
+      "options": [
+        "La couleur et l'esthétique du camion du livreur.",
+        "La température des produits frais, la DLC (Date Limite de Consommation) et l'intégrité des emballages.",
+        "L'historique comptable de la facture d'achat."
+      ],
+      "correctIndex": 1,
+      "explanation": "La réception des marchandises est un point de contrôle critique. Si la chaîne du froid a été rompue ou si la DLC est dépassée, la livraison doit être immédiatement refusée."
+    },
+    {
+      "id": 9,
+      "category": "Législation & Traçabilité",
+      "question": "Peut-on commercialiser ou utiliser un ingrédient dont la DLC est dépassée d'un seul jour ?",
+      "options": [
+        "Oui, si on le cuit à haute température pour éliminer les germes.",
+        "Oui, après un contrôle visuel et olfactif concluant.",
+        "Non, c'est strictement interdit. L'aliment est juridiquement considéré comme dangereux et doit être retiré."
+      ],
+      "correctIndex": 2,
+      "explanation": "La DLC indique une limite impérative de sécurité. Dépasser la DLC expose à de graves poursuites lors d'un contrôle AFSCA et présente un risque majeur de santé publique."
+    },
+    {
+      "id": 10,
+      "category": "Autocontrôle quotidien",
+      "question": "À quelle fréquence minimale devez-vous enregistrer par écrit les températures de vos enceintes réfrigérées ?",
+      "options": [
+        "Chaque semaine le lundi matin.",
+        "Une fois par jour (enregistrement quotidien de contrôle).",
+        "Uniquement en cas de panne constatée."
+      ],
+      "correctIndex": 1,
+      "explanation": "Un enregistrement quotidien est indispensable dans le registre d'autocontrôle pour prouver le maintien continu de la chaîne du froid et assurer une parfaite traçabilité."
+    }
+  ]
+}
