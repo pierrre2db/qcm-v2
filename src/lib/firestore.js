@@ -48,6 +48,13 @@ export async function terminerSalon(codeS) {
   await updateDoc(doc(db, 'rooms', codeS), { statut: 'termine' })
 }
 
+export async function abandonnerSalon(codeS) {
+  if (!isFirebaseConfigured || !db) return
+  try {
+    await updateDoc(doc(db, 'rooms', codeS), { statut: 'termine', abandonne: true })
+  } catch {} // silent — peut être appelé pendant un unload
+}
+
 export async function lireRoom(codeS) {
   if (!isFirebaseConfigured || !db) return null
   try {

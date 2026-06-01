@@ -18,7 +18,7 @@ import { useLiveQuiz } from './hooks/useLiveQuiz'
 import { signInAnon, isFirebaseConfigured } from './lib/firebase'
 import {
   creerSalon, inscrireJoueur, lancerPartie,
-  passerQuestionSuivante, terminerSalon,
+  passerQuestionSuivante, terminerSalon, abandonnerSalon,
   abonnerSalon, abonnerJoueurs,
   abonnerQuizzes, chargerQuizParId, lireRoom
 } from './lib/firestore'
@@ -109,10 +109,18 @@ export default function App() {
     return unsub
   }, [roomId, screen])
 
+  // ── Prof : fermeture onglet/navigateur → abandonne la session ───────────
+  useEffect(() => {
+    if (!roomId || screen !== S.DASHBOARD || salon?.statut === 'termine') return
+    const handler = () => { abandonnerSalon(roomId) }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [roomId, screen, salon?.statut])
+
   // ── Player: react to salon changes ─────────────────────────────────────
   useEffect(() => {
     if (!live.salon || screen === S.DASHBOARD) return
-    const { statut } = live.salon
+    const { statut, abandonne } = live.salon
     if (statut === 'attente' && screen !== S.LOBBY) setScreen(S.LOBBY)
     else if (statut === 'en-cours') {
       const enAttenteOuLobby = screen === S.LOBBY || screen === S.WAITING || screen === S.WELCOME
@@ -121,6 +129,13 @@ export default function App() {
         else setScreen(S.QUIZ_LIVE)
       }
     } else if (statut === 'termine') {
+      if (abandonne) {
+        // Session abandonnée prématurément par le professeur
+        showToast('⚠️ La session a été abandonnée par le professeur.')
+        setRoomId(null); quiz.reset(); setFinalResult(null)
+        setScreen(S.WELCOME)
+        return
+      }
       const score = live.scoreActuel
       const diff = Math.floor((new Date() - (quiz.startTime || new Date())) / 1000)
       const m = String(Math.floor(diff / 60)).padStart(2, '0')
@@ -208,7 +223,12 @@ export default function App() {
   }
 
   function handleCloseSession() {
-    terminerSalon(roomId).catch(() => {})
+    // Si la partie n'est pas encore terminée normalement → abandonner (notifie les joueurs)
+    if (salon?.statut !== 'termine') {
+      abandonnerSalon(roomId).catch(() => {})
+    } else {
+      terminerSalon(roomId).catch(() => {})
+    }
     setRoomId(null); setLivePlayers([]); setSalon(null)
     setScreen(S.WELCOME)
   }
