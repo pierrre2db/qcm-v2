@@ -6,7 +6,7 @@ function escapeHtml(text) {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
-export function ScreenWelcome({ meta, onJoin, onCreateSession, leaderboard }) {
+export function ScreenWelcome({ meta, onJoin, onCreateSession, leaderboard, onAdmin }) {
   const qrRef = useRef(null)
   const [username, setUsername] = useState('')
   const [roomCode, setRoomCode] = useState('')
@@ -140,6 +140,15 @@ export function ScreenWelcome({ meta, onJoin, onCreateSession, leaderboard }) {
             {!isFirebaseConfigured && (
               <p className="text-xs text-amber-400 text-center">Configurez Firebase dans src/lib/firebase.js</p>
             )}
+            <button
+              onClick={onAdmin}
+              className="w-full flex items-center justify-center space-x-2 text-slate-400 hover:text-emerald-300 text-xs font-semibold py-1.5 transition"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+              </svg>
+              <span>Charger un quiz JSON</span>
+            </button>
           </div>
         </div>
       </div>

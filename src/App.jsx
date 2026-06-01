@@ -11,6 +11,7 @@ import { ScreenResult } from './components/ScreenResult'
 import { ScreenReview } from './components/ScreenReview'
 import { ScreenDashboard } from './components/ScreenDashboard'
 import { ScreenPodium } from './components/ScreenPodium'
+import { AdminModal } from './components/AdminModal'
 import { Toast, useToast } from './components/Toast'
 import { useQuizStore } from './hooks/useQuizStore'
 import { useLiveQuiz } from './hooks/useLiveQuiz'
@@ -18,7 +19,8 @@ import { signInAnon, isFirebaseConfigured } from './lib/firebase'
 import {
   creerSalon, inscrireJoueur, lancerPartie,
   passerQuestionSuivante, terminerSalon,
-  abonnerSalon, abonnerJoueurs
+  abonnerSalon, abonnerJoueurs,
+  chargerQuiz
 } from './lib/firestore'
 
 const S = {
@@ -49,7 +51,9 @@ function saveToLeaderboard(name, score, time, groups) {
 }
 
 export default function App() {
-  const { meta, groups, questions } = normalizeQuiz(afscaData)
+  const [quizData, setQuizData] = useState(() => normalizeQuiz(afscaData))
+  const { meta, groups, questions } = quizData
+  const [showAdmin, setShowAdmin] = useState(false)
 
   const [screen, setScreen] = useState(S.WELCOME)
   const [username, setUsername] = useState('')
@@ -67,6 +71,7 @@ export default function App() {
   useEffect(() => {
     if (!isFirebaseConfigured) return
     signInAnon().then(user => { if (user) setUserId(user.uid) })
+    chargerQuiz().then(data => { if (data) setQuizData(normalizeQuiz(data)) })
   }, [])
 
   // Abonnement joueurs (dashboard + lobby)
@@ -216,7 +221,7 @@ export default function App() {
       <main className="flex-grow max-w-6xl w-full mx-auto px-4 py-6 md:py-10 flex flex-col justify-center">
 
         {screen === S.WELCOME && (
-          <ScreenWelcome meta={meta} onJoin={handleJoin} onCreateSession={handleCreateSession} leaderboard={leaderboard} />
+          <ScreenWelcome meta={meta} onJoin={handleJoin} onCreateSession={handleCreateSession} leaderboard={leaderboard} onAdmin={() => setShowAdmin(true)} />
         )}
 
         {screen === S.QUIZ && (
@@ -306,6 +311,12 @@ export default function App() {
       </footer>
 
       <Toast message={toastMsg} />
+      {showAdmin && (
+        <AdminModal
+          onClose={() => setShowAdmin(false)}
+          onQuizLoaded={normalized => { setQuizData(normalized); quiz.reset(); showToast('Quiz chargé !') }}
+        />
+      )}
     </div>
   )
 }

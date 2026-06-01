@@ -105,6 +105,26 @@ export function abonnerJoueurs(codeS, callback) {
   }, (err) => console.error('Erreur écoute joueurs:', err))
 }
 
+// ── QUIZ CONFIG ────────────────────────────────────────────────────────────
+
+export async function chargerQuiz() {
+  if (!isFirebaseConfigured || !db) return null
+  try {
+    const snap = await getDoc(doc(db, 'config', 'quiz'))
+    if (!snap.exists()) return null
+    const { updatedAt, ...data } = snap.data()
+    return data
+  } catch (e) {
+    console.error('chargerQuiz:', e)
+    return null
+  }
+}
+
+export async function sauvegarderQuiz(rawData) {
+  if (!isFirebaseConfigured || !db) return
+  await setDoc(doc(db, 'config', 'quiz'), { ...rawData, updatedAt: serverTimestamp() })
+}
+
 // ── LEGACY (mode progression individuelle — gardé pour solo) ───────────────
 
 export async function registerPlayer(roomId, userId, username) {
