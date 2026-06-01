@@ -3,7 +3,7 @@ import QRious from 'qrious'
 
 const DUREE_QUESTION = 30
 
-export function ScreenDashboard({ roomCode, players, totalQuestions, salon, onLancer, onQuestionSuivante, onTerminer, onClose }) {
+export function ScreenDashboard({ roomCode, players, totalQuestions, salon, currentCorrectIndex, onLancer, onQuestionSuivante, onTerminer, onClose }) {
   const qrRef = useRef(null)
   const [secondes, setSecondes] = useState(DUREE_QUESTION)
   const [autoAvanceDeclenche, setAutoAvanceDeclenche] = useState(false)
@@ -208,6 +208,30 @@ export function ScreenDashboard({ roomCode, players, totalQuestions, salon, onLa
             </div>
           </div>
         </div>
+
+        {/* Player status grid */}
+        {players.length > 0 && (
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-md overflow-hidden">
+            <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+              <h3 className="font-bold text-slate-800 text-sm">Réponses en temps réel</h3>
+              <span className="text-xs text-slate-500">{nbARepondu}/{players.length}</span>
+            </div>
+            <div className="p-4 flex flex-wrap gap-2">
+              {players.map((p, i) => {
+                const reponse = p.reponses?.[indiceQuestion]
+                const aRepondu = reponse !== undefined
+                const estCorrect = aRepondu && reponse === currentCorrectIndex
+                return (
+                  <span key={p.idUtilisateur || i} className={`font-semibold text-sm px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-colors
+                    ${!aRepondu ? 'bg-slate-100 text-slate-500' : estCorrect ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
+                    <span className={`w-2 h-2 rounded-full ${!aRepondu ? 'bg-slate-400' : estCorrect ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                    {p.prenom || p.username || '?'}
+                  </span>
+                )
+              })}
+            </div>
+          </div>
+        )}
       </div>
     )
   }
