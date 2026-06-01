@@ -1,7 +1,16 @@
 # Spécification Fonctionnelle & Technique — QCM Live V2
 
 > Document de référence pour recoder ou déboguer l'application complète.  
-> État : **production** · Dernière mise à jour : juin 2026
+> Version **2.1** · Dernière mise à jour : juin 2026
+
+---
+
+## Changelog
+
+| Version | Date | Modifications |
+|---------|------|---------------|
+| 2.0 | juin 2026 | Première spécification complète |
+| 2.1 | juin 2026 | Mode toggle Solo/Live · Thème Kahoot! · Sync quiz temps réel · Abandon de session · Prompt NotebookLM |
 
 ---
 
@@ -20,6 +29,7 @@
 11. [Déploiement](#11-déploiement)
 12. [Sécurité & administration](#12-sécurité--administration)
 13. [Règles Firestore](#13-règles-firestore)
+14. [Thème visuel Kahoot!](#14-thème-visuel-kahoot)
 
 ---
 
@@ -74,19 +84,19 @@ qcm-v2/
 │   │   ├── useQuizStore.js     ← État du quiz solo (sélection, score, timer)
 │   │   └── useLiveQuiz.js      ← État du quiz live (écoute Firestore, soumission)
 │   ├── components/
-│   │   ├── Header.jsx          ← En-tête avec bouton "Quitter" si live
+│   │   ├── Header.jsx          ← En-tête adaptatif (clair / sombre selon écran)
 │   │   ├── Toast.jsx           ← Notification temporaire + hook useToast()
 │   │   ├── Md.jsx              ← Renderer Markdown léger (Md inline, MdBlock)
-│   │   ├── ScreenWelcome.jsx   ← Accueil : connexion + sélecteur quiz + leaderboard
-│   │   ├── ScreenLobby.jsx     ← Salle d'attente joueur
+│   │   ├── ScreenWelcome.jsx   ← Accueil : toggle Solo/Live + leaderboard
+│   │   ├── ScreenLobby.jsx     ← Salle d'attente joueur (thème violet foncé)
 │   │   ├── ScreenQuiz.jsx      ← Quiz solo (avancement libre)
-│   │   ├── ScreenQuizLive.jsx  ← Quiz synchronisé (tap-to-answer)
-│   │   ├── ScreenWaiting.jsx   ← Attente question suivante (live)
+│   │   ├── ScreenQuizLive.jsx  ← Quiz synchronisé (tap-to-answer, 4 couleurs)
+│   │   ├── ScreenWaiting.jsx   ← Attente question suivante (plein écran vert/rouge)
 │   │   ├── ScreenResult.jsx    ← Résultat final + groupe
 │   │   ├── ScreenReview.jsx    ← Correction détaillée question par question
 │   │   ├── ScreenDashboard.jsx ← Tableau de bord enseignant (3 phases)
 │   │   ├── ScreenPodium.jsx    ← Classement final après session live
-│   │   └── ScreenAdmin.jsx     ← Gestion bibliothèque quiz + générateur de prompt
+│   │   └── ScreenAdmin.jsx     ← Gestion bibliothèque quiz + générateur de prompt NotebookLM
 │   ├── App.jsx                 ← Orchestrateur central : états, transitions d'écrans
 │   └── index.css
 ├── public/
@@ -101,7 +111,7 @@ qcm-v2/
 ### Mode Solo
 
 - Pas de Firebase requis (fonctionne hors ligne)
-- Joueur entre son prénom, laisse le code vide → `ScreenQuiz`
+- Joueur sélectionne l'onglet "Entraînement Solo" → saisit prénom → choisit un quiz → "Commencer"
 - Avancement question par question avec bouton "Valider"
 - Score sauvegardé dans `localStorage` (top 5, clé `qcm_scores`)
 - Correction détaillée disponible après les résultats
@@ -109,12 +119,13 @@ qcm-v2/
 ### Mode Live (synchronisé)
 
 - Requiert Firebase configuré
+- Joueur sélectionne l'onglet "Rejoindre la Classe" → saisit prénom + code session → "Rejoindre"
 - Enseignant crée une session → code 6 caractères + QR code
-- Joueurs rejoignent via QR code (pré-remplit le code) ou saisie manuelle
 - L'enseignant contrôle le démarrage et l'avancement question par question
 - Minuterie 60 secondes synchronisée sur `questionDemarreeA` (timestamp Firestore)
 - Avance automatique à 0s si l'enseignant n'a pas cliqué
 - Tap-to-answer : un seul appui sur une option = réponse envoyée (pas de confirmation)
+- Si le prof quitte en cours de partie → tous les joueurs reçoivent un toast et retournent à l'accueil
 
 ---
 
@@ -124,8 +135,10 @@ qcm-v2/
 
 ```
 ScreenWelcome
-  → saisit prénom, laisse code vide
-  → clic "Se connecter & Commencer"
+  → onglet "Entraînement Solo" (actif par défaut)
+  → saisit prénom
+  → choisit quiz dans la liste (chips)
+  → clic "Commencer l'entraînement"
 ScreenQuiz
   → répond question par question
   → clic "Valider" pour passer à la suivante
@@ -141,31 +154,37 @@ ScreenResult
 
 ```
 ScreenWelcome
+  → onglet "Rejoindre la Classe"
   → saisit prénom + code de session (6 chars)
-  → clic "Se connecter & Commencer"
+  → clic "Rejoindre la session"
   → lireRoom(code) → récupère quizId → charge le quiz correspondant
   → inscrireJoueur(code, userId, prenom)
-ScreenLobby
+ScreenLobby (thème violet foncé)
+  → voit le code, les autres joueurs connectés
   → attend que l'enseignant lance
   → écoute salon via useLiveQuiz → quand statut = 'en-cours'
-ScreenQuizLive
+ScreenQuizLive (thème violet foncé, boutons 4 couleurs)
   → voit la question courante (synchronisée avec Firestore)
-  → appuie sur une option → réponse immédiatement soumise
-ScreenWaiting
+  → appuie sur une option (rouge/bleu/jaune/vert) → réponse immédiatement soumise
+ScreenWaiting (plein écran vert si correct, rouge si faux)
   → voit si sa réponse était correcte
   → attend la question suivante → retour ScreenQuizLive auto
-  → quand statut = 'termine' :
+  → quand statut = 'termine' ET abandonne != true :
 ScreenResult
   → score calculé côté client
   → même flow que solo (correction disponible)
+
+Si le prof abandonne la session en cours :
+  → toast "⚠️ La session a été abandonnée par le professeur."
+  → retour automatique ScreenWelcome
 ```
 
 ### 5.3 Enseignant — Session Live
 
 ```
 ScreenWelcome
-  → sélectionne un quiz dans la bibliothèque (chips)
-  → clic "Créer une session live"
+  → sélectionne un quiz dans la bibliothèque (chips, onglet Solo visible)
+  → clic "Créer une session live" (espace enseignant toujours visible)
   → code 6 chars généré (sans 0/O/1/I)
   → creerSalon(code, nbQuestions, quizId)
 ScreenDashboard — phase Lobby
@@ -184,22 +203,26 @@ ScreenDashboard — phase Terminé
 ScreenPodium
   → top 3 + rang 4+ en dessous
   → "Fermer le salon" → terminerSalon() → ScreenWelcome
+
+Si l'enseignant ferme l'onglet ou clique "Fermer" en cours de partie :
+  → abandonnerSalon() → abandonne: true dans Firestore
+  → tous les joueurs connectés reçoivent le toast et retournent à l'accueil
 ```
 
 ### 5.4 Administrateur
 
 ```
 ScreenWelcome
-  → clic bouton "Administration" (icône engrenage)
+  → clic bouton "Administration" (icône engrenage, espace enseignant)
   → modal mot de passe (code : 1234)
   → mot de passe correct →
 ScreenAdmin
-  → Section 1 : Générateur de prompt Claude
+  → Section 1 : Générateur de prompt NotebookLM
     · Saisit sujet + nombre de questions
-    · Prompt mis à jour en temps réel
+    · Prompt mis à jour en temps réel (ancré sur documents sources)
     · Clic "Copier le prompt" → presse-papiers
     · Bouton "?" → panneau d'info format JSON
-  → Section 2 : Quiz disponibles
+  → Section 2 : Quiz disponibles (liste temps réel via onSnapshot)
     · Liste avec titre, nb questions, date
     · Bouton supprimer par quiz
   → Section 3 : Ajouter un quiz
@@ -219,13 +242,63 @@ ScreenAdmin
 **Props :** `{ meta, onJoin, onCreateSession, leaderboard, onAdmin, quizList, selectedQuizId, onSelectQuiz }`
 
 **Sections :**
-1. Badge + titre "Concours d'Hygiène de Classe" + description
-2. **Sélecteur de quiz** (affiché si `quizList.length > 0`) : chips horizontales, sélectionné = fond emerald. Met à jour l'état `selectedQuizId` dans App.
-3. **Formulaire joueur** : champ prénom + champ code (facultatif). Touche Entrée = submit. Validation : prénom non vide.
-4. **Espace enseignant** (dark card) : QR code canvas + bouton "Créer une session live" + bouton "Administration"
+1. Badge + titre + description
+2. **Toggle mode** : deux onglets "Entraînement Solo" / "Rejoindre la Classe" — Solo actif par défaut
+3. **Formulaire adaptatif** :
+   - Mode Solo : champ prénom + sélecteur quiz (chips, `quizList.length > 0`) + bouton "Commencer l'entraînement"
+   - Mode Live : champ prénom + champ code 6 chars (centré, grand) + bouton "Rejoindre la session"
+4. **Espace enseignant** (dark card, toujours visible) : QR code canvas + "Créer une session live" + "Administration"
 5. **Leaderboard solo** : tableau top 5 depuis `localStorage`
 
+**Comportements :**
+- Si URL contient `?room=CODE` → mode Live présélectionné + code pré-rempli
+- Touche Entrée = submit
+- `onJoin(name, code)` : en mode Solo, `code = ''`
+
 **QR code :** généré avec `QRious` sur `window.location.href` (sans query string), taille 140px, couleur `#059669`.
+
+---
+
+### ScreenLobby *(thème violet foncé)*
+
+**Props :** `{ prenom, codeS, joueurs }`
+
+- Fond violet foncé (`#46178F`) hérité de App
+- Spinner animé centré
+- Code session affiché en 5xl bold
+- Joueurs connectés : chips colorées (8 couleurs cycliques) avec initiale + prénom
+- Message "En attente du lancement…"
+
+---
+
+### ScreenQuizLive *(thème violet foncé, 4 couleurs Kahoot!)*
+
+**Props :** `{ question, indice, total, questionDemarreeA, onRepondre }`
+
+- Fond violet foncé hérité de App
+- Barre progression globale (blanc/20) + barre timer (vert→amber→rouge selon temps)
+- Carte question blanche centrée avec `<Md>` pour le texte
+- **4 boutons réponse en grille 1col (mobile) / 2col (≥sm)** :
+  - A : rouge `#E21B3C` + icône ▲
+  - B : bleu `#1368CE` + icône ◆
+  - C : jaune `#D89E00` + icône ●
+  - D : vert `#26890C` + icône ■
+- **Tap-to-answer** : clic → `confirme = true` → `onRepondre(idx)` immédiatement
+- Après réponse : options non sélectionnées → `opacity-40 scale-97`, sélectionnée → ring blanc + `scale-102`
+- Message bas : "✓ Réponse enregistrée — en attente de la prochaine question"
+- Timer 60s synchronisé sur `questionDemarreeA`
+
+---
+
+### ScreenWaiting *(plein écran dramatique)*
+
+**Props :** `{ estCorrect, indice, total }`
+
+- Fond violet foncé hérité de App
+- Icône circulaire géante (128px) : vert `#26890C` si correct, rouge `#E21B3C` si faux
+- Texte 4xl bold blanc : "Bonne réponse !" / "Pas tout à fait…"
+- Points animés bounce en attente
+- Barre progression blanche (opaque sur fond violet)
 
 ---
 
@@ -245,7 +318,7 @@ Trois branches selon `salon.statut` :
 - **Colonne gauche** : QR code 160px + code + URL (joueurs retardataires)
 - **Colonne droite** :
   - N° question courante (`salon.questionCourante + 1` / `totalQuestions`)
-  - Grille stats : joueurs ayant répondu (`reponses[qIdx] != null`) / score moyen / joueurs terminés
+  - Grille stats : joueurs ayant répondu / score moyen / joueurs terminés
   - Barre timer 60s (calcul depuis `salon.questionDemarreeA`)
   - Bouton "Question suivante" → `onQuestionSuivante(idx + 1)` — **toujours actif**
   - Bouton "Terminer" → `onTerminer()` à la dernière question
@@ -255,43 +328,33 @@ Trois branches selon `salon.statut` :
 - Bouton "Voir le Podium"
 - Bouton "Fermer le salon"
 
-**QR code :** régénéré quand `estLobby` change (taille différente selon phase).
-
----
-
-### ScreenQuizLive
-
-**Props :** `{ question, indice, total, questionDemarreeA, onRepondre }`
-
-- Affiche la question avec `<Md>` (support **gras**, *italique*)
-- 4 options rendues avec `<Md>`
-- **Tap-to-answer** : clic → `confirme = true` → `onRepondre(idx)` immédiatement
-- Après réponse : options non sélectionnées → `opacity-50 cursor-default`
-- Option sélectionnée : mise en avant (border emerald)
-- Footer message : "✓ Réponse enregistrée — en attente de la prochaine question"
-- Timer 60s synchronisé sur `questionDemarreeA`
-
 ---
 
 ### ScreenAdmin
 
 **Props :** `{ quizList, onQuizAdded, onQuizDeleted, onBack }`
 
-**Section "Générer avec Claude" (dark card) :**
+**Section "Générer avec NotebookLM" (dark card) :**
 - Input "Sujet du quiz" + input "Nb questions" (3–50, défaut 10)
-- `buildPrompt(sujet, nombre)` génère le prompt en direct
+- `buildPrompt(sujet, nombre)` génère un prompt ancré sur les documents sources du notebook
 - `pre` scrollable affichant le prompt
 - Bouton "Copier le prompt" (feedback visuel 2s "Copié !")
 - Bouton "?" → panneau d'info avec `JSON_FORMAT_EXEMPLE` + légende champs
 
+**Workflow NotebookLM :**
+1. Uploader les documents de cours dans NotebookLM
+2. Copier le prompt depuis l'admin
+3. Coller dans le chat NotebookLM → reçoit le JSON
+4. Coller le JSON dans la section "Ajouter un quiz"
+
 **Section "Quiz disponibles" :**
-- Liste des quiz Firestore avec titre, nb questions, date (`formatDate(ts)`)
-- Bouton supprimer (rouge) par ligne → `supprimerQuiz(id)` + `onQuizDeleted(id)`
+- Liste temps réel via `abonnerQuizzes()` (onSnapshot) — toutes les devices voient les ajouts/suppressions instantanément
+- Titre, nb questions, date + bouton supprimer → `supprimerQuiz(id)`
 
 **Section "Ajouter un quiz" :**
 - Zone drag-and-drop + `<input type="file" accept=".json">`
 - Textarea collage JSON
-- Les deux déclenchent `parseAndPreview(text)` → `normalizeQuiz()` → aperçu ou erreur
+- `parseAndPreview(text)` → `normalizeQuiz()` → aperçu ou erreur
 - Bouton "Ajouter à la bibliothèque" activé seulement si `preview !== null`
 - → `ajouterQuiz(raw, title, questionCount)` → `onQuizAdded({ id, title, questionCount })`
 
@@ -334,6 +397,18 @@ Trois branches selon `salon.statut` :
 
 ---
 
+### Header
+
+**Props :** `{ meta, username, isLive, onLeaveRoom, isDark }`
+
+- `isDark` = `true` pour les écrans LOBBY, QUIZ_LIVE, WAITING
+- Mode sombre : fond `#3b1278`, textes blancs, boutons `bg-white/15`
+- Mode clair : fond blanc, textes slate, boutons `bg-slate-100`
+- Badge "Live" (rose, animate-pulse) si `isLive`
+- Bouton "Quitter le Salon" si `isLive`
+
+---
+
 ## 7. Architecture Firestore
 
 ```
@@ -343,6 +418,7 @@ rooms/{roomId}                          ← session de jeu
   questionDemarreeA: Timestamp | null   ← base de la minuterie 60s
   totalQuestions: number
   quizId: string | null                 ← ID du quiz Firestore sélectionné
+  abandonne: boolean (optionnel)        ← true si session quittée prématurément
   creeA: Timestamp
 
 rooms/{roomId}/players/{userId}         ← un document par joueur
@@ -369,13 +445,14 @@ quizzes/{quizId}                        ← bibliothèque de quiz
 | `creerSalon(codeS, total, quizId)` | setDoc | Crée room en statut 'attente' |
 | `lancerPartie(codeS)` | updateDoc | statut → 'en-cours', questionCourante → 0 |
 | `passerQuestionSuivante(codeS, idx, total)` | updateDoc | Avance ou termine |
-| `terminerSalon(codeS)` | updateDoc | statut → 'termine' |
+| `terminerSalon(codeS)` | updateDoc | statut → 'termine' (fin normale) |
+| `abandonnerSalon(codeS)` | updateDoc (silent) | statut → 'termine' + abandonne → true |
 | `lireRoom(codeS)` | getDoc | Lecture unique (player join) |
 | `abonnerSalon(codeS, cb)` | onSnapshot | Écoute temps réel du salon |
 | `inscrireJoueur(codeS, uid, prenom)` | setDoc | Crée doc joueur |
 | `soumettreReponse(...)` | getDoc + updateDoc | Merge réponse + recalcule score |
 | `abonnerJoueurs(codeS, cb)` | onSnapshot (collection) | Liste joueurs temps réel |
-| `listerQuizzes()` | getDocs + query | Métadonnées uniquement, tri `creeA` desc |
+| `abonnerQuizzes(cb)` | onSnapshot + query | Liste quiz temps réel, tri creeA desc |
 | `ajouterQuiz(raw, title, count)` | addDoc | Stocke JSON brut complet |
 | `chargerQuizParId(id)` | getDoc | Retourne `{ id, rawData, ... }` |
 | `supprimerQuiz(id)` | deleteDoc | Supprime quiz bibliothèque |
@@ -414,7 +491,7 @@ quizzes/{quizId}                        ← bibliothèque de quiz
 }
 ```
 
-### Nouveau format Claude (généré par le prompt builder)
+### Nouveau format NotebookLM/Claude (généré par le prompt builder)
 
 ```json
 {
@@ -438,7 +515,7 @@ quizzes/{quizId}                        ← bibliothèque de quiz
 }
 ```
 
-**Champs clés du nouveau format :**
+**Champs clés :**
 - `bonne_reponse` : lettre `"A"`, `"B"`, `"C"` ou `"D"` (détection du format)
 - `options` : objet `{A, B, C, D}` (pas un tableau)
 - `difficulte` : entier 1–5 → affiché en `category` comme `"Difficulté X/5"`
@@ -464,16 +541,16 @@ quizzes/{quizId}                        ← bibliothèque de quiz
       - explanation = pourquoi ?? ''
 ```
 
-**Stockage dans Firestore :** le JSON brut original est stocké (`rawData`). La normalisation est appliquée au chargement côté client.
+**Stockage Firestore :** JSON brut original stocké (`rawData`). Normalisation côté client au chargement.
 
 ### 9.2 Synchronisation minuterie 60s
 
 ```
 1. Enseignant avance → passerQuestionSuivante() → updateDoc({ questionDemarreeA: serverTimestamp() })
 2. Joueurs et enseignant écoutent salon via onSnapshot
-3. questionDemarreeA reçu → calcul elapsed = (Date.now() - questionDemarreeA.toMillis()) / 1000
+3. questionDemarreeA reçu → elapsed = (Date.now() - questionDemarreeA.toMillis()) / 1000
 4. remaining = Math.max(0, 60 - elapsed)
-5. setInterval 1s pour mise à jour UI
+5. setInterval 500ms pour mise à jour UI
 6. Si remaining ≤ 0 → auto-avance (enseignant uniquement via Dashboard)
 ```
 
@@ -481,10 +558,10 @@ quizzes/{quizId}                        ← bibliothèque de quiz
 
 ```
 1. Joueur appuie sur option
-2. confirme = true (désactive toutes les autres options visuellement)
+2. confirme = true (désactive les autres options visuellement)
 3. onRepondre(idx) appelé immédiatement → soumettreReponse() vers Firestore
 4. App → setDernierReponse({ estCorrect, indice }) → setScreen(S.WAITING)
-5. Live.salon change → statut 'en-cours', question suivante → setScreen(S.QUIZ_LIVE)
+5. live.salon change → question suivante → setScreen(S.QUIZ_LIVE)
 ```
 
 ### 9.4 Calcul de score (soumettreReponse)
@@ -506,10 +583,49 @@ quizzes/{quizId}                        ← bibliothèque de quiz
 3. Si quizId → chargerQuizParId(quizId) → { rawData }
 4. setQuizData(normalizeQuiz(rawData)) + quiz.reset()
 5. Joueur a maintenant les mêmes questions que l'enseignant
-6. inscrireJoueur() + setScreen(LOBBY)
+6. inscrireJoueur() + setRoomId() [batch React 18] + setScreen(LOBBY)
 ```
 
-### 9.6 Leaderboard solo (localStorage)
+### 9.6 Transition écrans live (correction bug timing)
+
+```
+Problème : setRoomId() et setScreen(LOBBY) séparés par await inscrireJoueur().
+Si salon déjà 'en-cours', live.salon fire avant que screen = LOBBY.
+Condition ancienne : screen === LOBBY → transition manquée.
+
+Fix : condition élargie
+  statut 'en-cours' + screen ∈ {LOBBY, WAITING, WELCOME}
+    → si aDejaRepondu : WAITING
+    → sinon : QUIZ_LIVE
+```
+
+### 9.7 Abandon de session
+
+```
+Déclencheurs :
+  a. Prof ferme l'onglet/navigateur (beforeunload) pendant la partie
+  b. Prof clique "Fermer le salon" quand statut !== 'termine'
+
+Action : abandonnerSalon(roomId) → updateDoc({ statut: 'termine', abandonne: true })
+  (silent try/catch — peut échouer pendant unload)
+
+Réception côté joueur (live.salon effect) :
+  statut = 'termine' ET abandonne = true
+    → showToast("⚠️ La session a été abandonnée par le professeur.")
+    → setRoomId(null), quiz.reset(), retour WELCOME
+
+Fin normale (sans abandonne) → flow normal ScreenResult
+```
+
+### 9.8 Sync temps réel bibliothèque quiz
+
+```
+Remplace listerQuizzes() (one-shot) par abonnerQuizzes() (onSnapshot).
+Tous les appareils voient instantanément les ajouts/suppressions depuis l'Admin.
+selectedQuizId : conservé si déjà défini (prev ?? list[0].id).
+```
+
+### 9.9 Leaderboard solo (localStorage)
 
 ```
 - Clé : 'qcm_scores'
@@ -519,7 +635,7 @@ quizzes/{quizId}                        ← bibliothèque de quiz
 - Groupe calculé par getGroupLabel(score, groups)
 ```
 
-### 9.7 Génération code session
+### 9.10 Génération code session
 
 ```javascript
 const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -528,7 +644,7 @@ let code = ''
 for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)]
 ```
 
-### 9.8 Renderer Markdown (`Md.jsx`)
+### 9.11 Renderer Markdown (`Md.jsx`)
 
 ```
 Md (inline) :
@@ -563,7 +679,7 @@ const firebaseConfig = {
 }
 ```
 
-**`isFirebaseConfigured`** : booléen exporté, `true` si `firebaseConfig.apiKey` est défini. Utilisé dans toute l'app pour conditionner les appels Firebase.
+**`isFirebaseConfigured`** : booléen exporté, `true` si `firebaseConfig.apiKey` est défini.
 
 **Auth anonyme :** `signInAnon()` appelé au montage de `App`. Retourne `{ uid }` utilisé comme identifiant joueur.
 
@@ -578,7 +694,7 @@ const firebaseConfig = {
 3. `npm run build` → génère `dist/`
 4. Upload `dist/` → GitHub Pages
 
-**Attention :** GitHub peut créer automatiquement un second workflow `static.yml` qui déploie les sources brutes (sans build) et peut écraser le déploiement correct. **Ne jamais laisser deux workflows actifs.** Si `static.yml` existe, le supprimer.
+**Attention :** GitHub peut créer automatiquement un second workflow `static.yml` qui déploie les sources brutes (sans build). **Ne jamais laisser deux workflows actifs.** Si `static.yml` existe, le supprimer immédiatement.
 
 ### Commandes développement
 
@@ -606,7 +722,7 @@ const firebaseConfig = {
 
 ### Sécurité quiz
 
-- Les quiz sont stockés dans Firestore avec accès public en lecture/écriture (règles ouvertes)
+- Quiz stockés dans Firestore avec accès public en lecture/écriture (règles ouvertes)
 - Seul l'accès à l'écran Admin (via mot de passe) permet d'ajouter/supprimer
 
 ---
@@ -635,7 +751,48 @@ service cloud.firestore {
 }
 ```
 
-> Les règles sont intentionnellement ouvertes (application scolaire interne). En environnement de production exposé, ajouter une validation d'authentification.
+> Règles intentionnellement ouvertes (application scolaire interne). En environnement exposé, ajouter validation d'authentification.
+
+---
+
+## 14. Thème visuel Kahoot!
+
+Les écrans de jeu actifs (LOBBY, QUIZ_LIVE, WAITING) utilisent un thème sombre inspiré de Kahoot!.
+
+### Palette de couleurs
+
+| Élément | Couleur | Code hex |
+|---------|---------|----------|
+| Fond principal jeu | Violet foncé | `#46178F` |
+| Fond header sombre | Violet moyen | `#3b1278` |
+| Réponse A | Rouge | `#E21B3C` |
+| Réponse B | Bleu | `#1368CE` |
+| Réponse C | Jaune/or | `#D89E00` |
+| Réponse D | Vert | `#26890C` |
+| Correct (ScreenWaiting) | Vert | `#26890C` |
+| Incorrect (ScreenWaiting) | Rouge | `#E21B3C` |
+
+### Icônes des réponses
+
+| Option | Icône | Couleur |
+|--------|-------|---------|
+| A | ▲ triangle | Rouge |
+| B | ◆ losange | Bleu |
+| C | ● cercle | Jaune |
+| D | ■ carré | Vert |
+
+### Détection écran sombre (App.jsx)
+
+```js
+const isDark = [S.LOBBY, S.QUIZ_LIVE, S.WAITING].includes(screen)
+// → prop isDark passée au Header
+// → fond App : bg-[#46178F] si isDark, bg-slate-50 sinon
+```
+
+### Avatars joueurs (ScreenLobby)
+
+8 couleurs cycliques : rouge, bleu, jaune, vert, violet, rose, cyan, orange.
+Initiale du prénom affichée dans un cercle coloré.
 
 ---
 
@@ -653,3 +810,5 @@ service cloud.firestore {
 | Chars code session | `ABCDEFGHJKLMNPQRSTUVWXYZ23456789` | `App.jsx` |
 | Top leaderboard | 5 entrées | `App.jsx` |
 | Seuil groupe défaut | 40% / 75% | `normalizeQuiz.js` |
+| Fond jeu sombre | `#46178F` | `App.jsx` (isDark) |
+| Fond header sombre | `#3b1278` | `Header.jsx` |
