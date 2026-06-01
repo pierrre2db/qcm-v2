@@ -1,10 +1,21 @@
-const AVATAR_COLORS = [
-  'bg-[#E21B3C]', 'bg-[#1368CE]', 'bg-[#D89E00]', 'bg-[#26890C]',
-  'bg-violet-500', 'bg-pink-500', 'bg-cyan-500', 'bg-orange-500',
-]
+import { useState } from 'react'
+import { getAvatarUrl, getInitials } from '../lib/avatars'
 
-function getInitial(name) {
-  return (name || '?')[0].toUpperCase()
+function PlayerChip({ joueur }) {
+  const name = joueur.prenom || joueur.username || '?'
+  const [imgOk, setImgOk] = useState(true)
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <div className="w-12 h-12 rounded-full overflow-hidden shadow-lg ring-2 ring-white/30">
+        {imgOk ? (
+          <img src={getAvatarUrl(name)} alt={getInitials(name)} onError={() => setImgOk(false)} className="w-full h-full object-cover bg-white/10" />
+        ) : (
+          <div className="w-full h-full bg-white/20 flex items-center justify-center font-black text-sm text-white">{getInitials(name)}</div>
+        )}
+      </div>
+      <span className="text-[9px] text-white/70 font-semibold max-w-[48px] truncate text-center">{name}</span>
+    </div>
+  )
 }
 
 export function ScreenLobby({ prenom, codeS, joueurs }) {
@@ -38,7 +49,7 @@ export function ScreenLobby({ prenom, codeS, joueurs }) {
         <p className="text-5xl font-black text-white tracking-widest">{codeS}</p>
       </div>
 
-      {/* Player count + grid */}
+      {/* Player count + avatars */}
       <div className="w-full max-w-md space-y-4">
         <div className="flex items-center justify-center gap-2">
           <span className="text-white/70 text-sm font-semibold">
@@ -52,16 +63,9 @@ export function ScreenLobby({ prenom, codeS, joueurs }) {
         </div>
 
         {joueurs.length > 0 && (
-          <div className="flex flex-wrap justify-center gap-2">
+          <div className="flex flex-wrap justify-center gap-3">
             {joueurs.map((j, i) => (
-              <div key={j.idUtilisateur || i}
-                className={`${AVATAR_COLORS[i % AVATAR_COLORS.length]} rounded-2xl px-3 py-2 flex items-center gap-2 shadow-lg`}
-              >
-                <span className="w-6 h-6 rounded-full bg-black/20 flex items-center justify-center text-white font-black text-xs shrink-0">
-                  {getInitial(j.prenom || j.username)}
-                </span>
-                <span className="text-white font-bold text-sm">{j.prenom || j.username}</span>
-              </div>
+              <PlayerChip key={j.idUtilisateur || i} joueur={j} />
             ))}
           </div>
         )}

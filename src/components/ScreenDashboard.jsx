@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import QRious from 'qrious'
+import { getAvatarUrl, getInitials } from '../lib/avatars'
 
 const DUREE_QUESTION = 30
 
@@ -8,18 +9,6 @@ const ANSWER_COLORS = [
   { bg: 'bg-[#1368CE]', text: 'text-white', shape: '◆', label: 'B' },
   { bg: 'bg-[#D89E00]', text: 'text-white', shape: '●', label: 'C' },
   { bg: 'bg-[#26890C]', text: 'text-white', shape: '■', label: 'D' },
-]
-
-function getInitials(name) {
-  const clean = (name || '?').trim()
-  const words = clean.split(/[\s\-_]+/).filter(Boolean)
-  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase()
-  return clean.slice(0, 2).toUpperCase()
-}
-
-const AVATAR_BG = [
-  'bg-violet-500', 'bg-cyan-500', 'bg-orange-500', 'bg-pink-500',
-  'bg-indigo-500', 'bg-teal-500', 'bg-amber-500', 'bg-lime-600',
 ]
 
 export function ScreenDashboard({ roomCode, players, totalQuestions, salon, currentQuestion, currentCorrectIndex, onLancer, onQuestionSuivante, onTerminer, onClose }) {
@@ -84,24 +73,52 @@ export function ScreenDashboard({ roomCode, players, totalQuestions, salon, curr
     }
   }
 
-  // ── Avatar component ──────────────────────────────────────────────────────
-  function PlayerAvatar({ player, index, reponse, aRepondu, estCorrect }) {
-    const initials = getInitials(player.prenom || player.username)
-    const baseBg = AVATAR_BG[index % AVATAR_BG.length]
+  // ── Avatar components ─────────────────────────────────────────────────────
+  function LobbyAvatar({ player }) {
+    const name = player.prenom || player.username || '?'
+    const [imgOk, setImgOk] = useState(true)
     return (
       <div className="flex flex-col items-center gap-1">
-        <div className={`relative w-11 h-11 rounded-full flex items-center justify-center font-black text-sm text-white shadow-md transition-all duration-300
-          ${!aRepondu ? baseBg + ' opacity-40' : estCorrect ? 'bg-emerald-500 ring-2 ring-emerald-300' : 'bg-rose-500 ring-2 ring-rose-300'}`}>
-          {initials}
+        <div className="w-12 h-12 rounded-full overflow-hidden shadow-md ring-2 ring-emerald-200">
+          {imgOk ? (
+            <img src={getAvatarUrl(name)} alt={getInitials(name)} onError={() => setImgOk(false)} className="w-full h-full object-cover bg-slate-100" />
+          ) : (
+            <div className="w-full h-full bg-slate-400 flex items-center justify-center font-black text-sm text-white">{getInitials(name)}</div>
+          )}
+        </div>
+        <span className="text-[9px] text-slate-500 font-semibold max-w-[48px] truncate text-center">{name}</span>
+      </div>
+    )
+  }
+
+  function PlayerAvatar({ player, index, aRepondu, estCorrect }) {
+    const name = player.prenom || player.username || '?'
+    const [imgOk, setImgOk] = useState(true)
+    return (
+      <div className="flex flex-col items-center gap-1">
+        <div className={`relative w-12 h-12 rounded-full overflow-hidden shadow-md transition-all duration-300
+          ${!aRepondu ? 'opacity-35 grayscale' : estCorrect ? 'ring-[3px] ring-emerald-400 shadow-emerald-200' : 'ring-[3px] ring-rose-400 shadow-rose-200'}`}>
+          {imgOk ? (
+            <img
+              src={getAvatarUrl(name)}
+              alt={getInitials(name)}
+              onError={() => setImgOk(false)}
+              className="w-full h-full object-cover bg-slate-100"
+            />
+          ) : (
+            <div className="w-full h-full bg-slate-400 flex items-center justify-center font-black text-sm text-white">
+              {getInitials(name)}
+            </div>
+          )}
           {aRepondu && (
-            <span className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black
-              ${estCorrect ? 'bg-white text-emerald-600' : 'bg-white text-rose-600'}`}>
+            <span className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black shadow
+              ${estCorrect ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`}>
               {estCorrect ? '✓' : '✗'}
             </span>
           )}
         </div>
-        <span className="text-[9px] text-slate-500 font-semibold max-w-[44px] truncate text-center">
-          {player.prenom || player.username || '?'}
+        <span className="text-[9px] text-slate-500 font-semibold max-w-[48px] truncate text-center leading-tight">
+          {name}
         </span>
       </div>
     )
@@ -177,14 +194,7 @@ export function ScreenDashboard({ roomCode, players, totalQuestions, salon, curr
             </div>
             <div className="p-5 flex flex-wrap gap-4">
               {players.map((p, i) => (
-                <div key={p.idUtilisateur || i} className="flex flex-col items-center gap-1">
-                  <div className={`w-11 h-11 rounded-full flex items-center justify-center font-black text-sm text-white shadow-md ${AVATAR_BG[i % AVATAR_BG.length]}`}>
-                    {getInitials(p.prenom || p.username)}
-                  </div>
-                  <span className="text-[9px] text-slate-500 font-semibold max-w-[44px] truncate text-center">
-                    {p.prenom || p.username || '?'}
-                  </span>
-                </div>
+                <LobbyAvatar key={p.idUtilisateur || i} player={p} />
               ))}
             </div>
           </div>
@@ -356,14 +366,7 @@ export function ScreenDashboard({ roomCode, players, totalQuestions, salon, curr
         {players.length > 0 && (
           <div className="flex flex-wrap justify-center gap-3 pt-2">
             {players.map((p, i) => (
-              <div key={p.idUtilisateur || i} className="flex flex-col items-center gap-1">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm text-white shadow-md ${AVATAR_BG[i % AVATAR_BG.length]}`}>
-                  {getInitials(p.prenom || p.username)}
-                </div>
-                <span className="text-[9px] text-slate-500 font-semibold max-w-[40px] truncate text-center">
-                  {p.prenom || p.username || '?'}
-                </span>
-              </div>
+              <LobbyAvatar key={p.idUtilisateur || i} player={p} />
             ))}
           </div>
         )}
