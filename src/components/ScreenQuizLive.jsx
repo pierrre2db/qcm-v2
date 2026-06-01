@@ -24,10 +24,11 @@ export function ScreenQuizLive({ question, indice, total, questionDemarreeA, onR
     return () => clearInterval(interval)
   }, [questionDemarreeA, indice])
 
-  async function handleConfirmer() {
-    if (selectionne === null || confirme) return
+  async function handleSelect(idx) {
+    if (confirme) return
+    setSelectionne(idx)
     setConfirme(true)
-    await onRepondre(selectionne)
+    await onRepondre(idx)
   }
 
   const pctTimer = (secondesRestantes / DUREE_QUESTION) * 100
@@ -62,9 +63,9 @@ export function ScreenQuizLive({ question, indice, total, questionDemarreeA, onR
           <span className="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Live</span>
         </div>
 
-        <div className="p-6 md:p-8 space-y-6">
+        <div className="p-6 md:p-8 space-y-4">
           <h3 className="text-lg md:text-xl font-bold text-slate-900 leading-snug">{question.question}</h3>
-          <div className="grid grid-cols-1 gap-3.5">
+          <div className="grid grid-cols-1 gap-3">
             {question.options.map((option, idx) => {
               const estSelectionne = selectionne === idx
               return (
@@ -72,10 +73,14 @@ export function ScreenQuizLive({ question, indice, total, questionDemarreeA, onR
                   key={idx}
                   type="button"
                   disabled={confirme}
-                  onClick={() => !confirme && setSelectionne(idx)}
+                  onClick={() => handleSelect(idx)}
                   className={`w-full text-left p-4 rounded-2xl border-2 transition-all flex items-start space-x-3 group
-                    ${estSelectionne ? 'border-emerald-500 bg-emerald-50/30 ring-2 ring-emerald-500/10' : 'border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/10'}
-                    ${confirme ? 'opacity-70 cursor-default' : ''}`}
+                    ${estSelectionne
+                      ? 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-500/20'
+                      : confirme
+                      ? 'border-slate-100 bg-slate-50 opacity-50 cursor-default'
+                      : 'border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/20 active:scale-[0.98]'
+                    }`}
                 >
                   <span className={`flex items-center justify-center w-7 h-7 rounded-lg font-bold text-sm transition-colors uppercase select-none shrink-0
                     ${estSelectionne ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-emerald-100 group-hover:text-emerald-700'}`}>
@@ -88,17 +93,10 @@ export function ScreenQuizLive({ question, indice, total, questionDemarreeA, onR
           </div>
         </div>
 
-        <div className="bg-slate-50 px-6 py-4 border-t border-slate-100 flex justify-between items-center">
-          <p className="text-xs text-slate-400 italic">
-            {confirme ? 'Réponse enregistrée. En attente...' : 'Sélectionnez une réponse.'}
+        <div className="bg-slate-50 px-6 py-3 border-t border-slate-100">
+          <p className="text-xs text-slate-400 italic text-center">
+            {confirme ? '✓ Réponse enregistrée — en attente de la prochaine question' : 'Appuyez sur une réponse pour valider.'}
           </p>
-          <button
-            onClick={handleConfirmer}
-            disabled={selectionne === null || confirme}
-            className="bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-200 disabled:text-slate-400 text-white font-bold py-2.5 px-6 rounded-xl text-sm transition-all shadow-md disabled:shadow-none flex items-center space-x-1.5"
-          >
-            <span>{confirme ? 'Envoyé ✓' : 'Valider'}</span>
-          </button>
         </div>
       </div>
     </div>

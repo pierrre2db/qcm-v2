@@ -194,8 +194,7 @@ export function ScreenDashboard({ roomCode, players, totalQuestions, salon, onLa
               <div className="flex gap-3">
                 <button
                   onClick={() => onQuestionSuivante(indiceQuestion + 1)}
-                  disabled={nbARepondu === 0}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-xl transition shadow-md"
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-4 rounded-xl transition shadow-md"
                 >
                   {indiceQuestion + 1 >= totalQuestions ? 'Terminer la partie' : 'Question suivante →'}
                 </button>
