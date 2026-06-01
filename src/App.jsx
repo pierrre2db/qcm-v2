@@ -11,7 +11,7 @@ import { ScreenResult } from './components/ScreenResult'
 import { ScreenReview } from './components/ScreenReview'
 import { ScreenDashboard } from './components/ScreenDashboard'
 import { ScreenPodium } from './components/ScreenPodium'
-import { AdminModal } from './components/AdminModal'
+import { ScreenAdmin } from './components/ScreenAdmin'
 import { Toast, useToast } from './components/Toast'
 import { useQuizStore } from './hooks/useQuizStore'
 import { useLiveQuiz } from './hooks/useLiveQuiz'
@@ -26,14 +26,17 @@ import {
 const S = {
   WELCOME: 'welcome',
   QUIZ: 'quiz',
-  LOBBY: 'lobby',        // joueur attend
+  LOBBY: 'lobby',
   QUIZ_LIVE: 'quiz_live',
-  WAITING: 'waiting',    // joueur a répondu, attend suivante
+  WAITING: 'waiting',
   RESULT: 'result',
   REVIEW: 'review',
   DASHBOARD: 'dashboard',
   PODIUM: 'podium',
+  ADMIN: 'admin',
 }
+
+const ADMIN_PASSWORD = '1234'
 
 const LS_KEY = 'qcm_scores'
 
@@ -53,7 +56,9 @@ function saveToLeaderboard(name, score, time, groups) {
 export default function App() {
   const [quizData, setQuizData] = useState(() => normalizeQuiz(afscaData))
   const { meta, groups, questions } = quizData
-  const [showAdmin, setShowAdmin] = useState(false)
+  const [passInput, setPassInput] = useState('')
+  const [passError, setPassError] = useState(false)
+  const [showPassPrompt, setShowPassPrompt] = useState(false)
 
   const [screen, setScreen] = useState(S.WELCOME)
   const [username, setUsername] = useState('')
@@ -202,6 +207,22 @@ export default function App() {
     showToast('Vous avez quitté le salon.')
   }
 
+  function handleAdminAccess() {
+    setPassInput('')
+    setPassError(false)
+    setShowPassPrompt(true)
+  }
+
+  function handlePassSubmit(e) {
+    e.preventDefault()
+    if (passInput === ADMIN_PASSWORD) {
+      setShowPassPrompt(false)
+      setScreen(S.ADMIN)
+    } else {
+      setPassError(true)
+    }
+  }
+
   function handleRestart() {
     quiz.reset()
     setFinalResult(null)
@@ -221,7 +242,15 @@ export default function App() {
       <main className="flex-grow max-w-6xl w-full mx-auto px-4 py-6 md:py-10 flex flex-col justify-center">
 
         {screen === S.WELCOME && (
-          <ScreenWelcome meta={meta} onJoin={handleJoin} onCreateSession={handleCreateSession} leaderboard={leaderboard} onAdmin={() => setShowAdmin(true)} />
+          <ScreenWelcome meta={meta} onJoin={handleJoin} onCreateSession={handleCreateSession} leaderboard={leaderboard} onAdmin={handleAdminAccess} />
+        )}
+
+        {screen === S.ADMIN && (
+          <ScreenAdmin
+            currentQuiz={quizData}
+            onQuizLoaded={normalized => { setQuizData(normalized); quiz.reset(); showToast('Quiz chargé !') }}
+            onBack={() => setScreen(S.WELCOME)}
+          />
         )}
 
         {screen === S.QUIZ && (
@@ -311,11 +340,37 @@ export default function App() {
       </footer>
 
       <Toast message={toastMsg} />
-      {showAdmin && (
-        <AdminModal
-          onClose={() => setShowAdmin(false)}
-          onQuizLoaded={normalized => { setQuizData(normalized); quiz.reset(); showToast('Quiz chargé !') }}
-        />
+
+      {showPassPrompt && (
+        <div className="fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4" onClick={() => setShowPassPrompt(false)}>
+          <form onSubmit={handlePassSubmit} onClick={e => e.stopPropagation()}
+            className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-sm space-y-5">
+            <div>
+              <h2 className="text-xl font-extrabold text-slate-900">Administration</h2>
+              <p className="text-xs text-slate-400 mt-1">Mot de passe requis</p>
+            </div>
+            <input
+              autoFocus
+              type="password"
+              value={passInput}
+              onChange={e => { setPassInput(e.target.value); setPassError(false) }}
+              placeholder="••••"
+              className={`w-full px-4 py-3 bg-slate-50 border-2 rounded-2xl text-lg font-bold text-center tracking-widest focus:outline-none transition
+                ${passError ? 'border-rose-400 bg-rose-50' : 'border-slate-200 focus:border-emerald-500'}`}
+            />
+            {passError && <p className="text-xs text-rose-500 text-center font-semibold">Mot de passe incorrect.</p>}
+            <div className="flex gap-3">
+              <button type="button" onClick={() => setShowPassPrompt(false)}
+                className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-2xl transition text-sm">
+                Annuler
+              </button>
+              <button type="submit"
+                className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-2xl transition shadow-md text-sm">
+                Entrer →
+              </button>
+            </div>
+          </form>
+        </div>
       )}
     </div>
   )
