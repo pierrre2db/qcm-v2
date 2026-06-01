@@ -8,5 +8,5 @@ export default defineConfig({
     https: false, // set to true with mkcert for local HTTPS if needed
     port: 5173,
   },
-  base: './', // relative paths for GitHub Pages
+  base: '/qcm-v2/',
 })
