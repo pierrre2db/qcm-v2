@@ -3,18 +3,29 @@ import afscaData from './data/afsca.json'
 import { Header } from './components/Header'
 import { ScreenWelcome } from './components/ScreenWelcome'
 import { ScreenQuiz } from './components/ScreenQuiz'
+import { ScreenQuizLive } from './components/ScreenQuizLive'
+import { ScreenLobby } from './components/ScreenLobby'
+import { ScreenWaiting } from './components/ScreenWaiting'
 import { ScreenResult } from './components/ScreenResult'
 import { ScreenReview } from './components/ScreenReview'
 import { ScreenDashboard } from './components/ScreenDashboard'
 import { ScreenPodium } from './components/ScreenPodium'
 import { Toast, useToast } from './components/Toast'
 import { useQuizStore } from './hooks/useQuizStore'
+import { useLiveQuiz } from './hooks/useLiveQuiz'
 import { signInAnon, isFirebaseConfigured } from './lib/firebase'
-import { registerPlayer, updateProgress, subscribeToPlayers } from './lib/firestore'
+import {
+  creerSalon, inscrireJoueur, lancerPartie,
+  passerQuestionSuivante, terminerSalon,
+  abonnerSalon, abonnerJoueurs
+} from './lib/firestore'
 
 const S = {
   WELCOME: 'welcome',
   QUIZ: 'quiz',
+  LOBBY: 'lobby',        // joueur attend
+  QUIZ_LIVE: 'quiz_live',
+  WAITING: 'waiting',    // joueur a répondu, attend suivante
   RESULT: 'result',
   REVIEW: 'review',
   DASHBOARD: 'dashboard',
@@ -26,18 +37,12 @@ const LS_KEY = 'qcm_scores'
 function getGroupLabel(score, groups) {
   return (groups.find(g => score <= g.maxScore) ?? groups[groups.length - 1]).label
 }
-
 function loadLeaderboard() {
   try { return JSON.parse(localStorage.getItem(LS_KEY)) || [] } catch { return [] }
 }
-
 function saveToLeaderboard(name, score, time, groups) {
   const entries = loadLeaderboard()
-  entries.push({
-    name, score, time,
-    group: getGroupLabel(score, groups),
-    date: new Date().toLocaleDateString('fr-BE', { day: 'numeric', month: 'short', year: 'numeric' })
-  })
+  entries.push({ name, score, time, group: getGroupLabel(score, groups), date: new Date().toLocaleDateString('fr-BE', { day: 'numeric', month: 'short', year: 'numeric' }) })
   entries.sort((a, b) => b.score - a.score || a.time.localeCompare(b.time))
   localStorage.setItem(LS_KEY, JSON.stringify(entries.slice(0, 5)))
 }
@@ -50,50 +55,84 @@ export default function App() {
   const [roomId, setRoomId] = useState(null)
   const [userId, setUserId] = useState(null)
   const [livePlayers, setLivePlayers] = useState([])
+  const [salon, setSalon] = useState(null)
   const [finalResult, setFinalResult] = useState(null)
+  const [dernierReponse, setDernierReponse] = useState(null) // { estCorrect, indice }
   const [leaderboard, setLeaderboard] = useState(loadLeaderboard)
   const { message: toastMsg, show: showToast } = useToast()
   const quiz = useQuizStore(questions)
+  const live = useLiveQuiz(roomId, userId, questions)
 
   useEffect(() => {
     if (!isFirebaseConfigured) return
     signInAnon().then(user => { if (user) setUserId(user.uid) })
   }, [])
 
+  // Abonnement joueurs (dashboard + lobby)
   useEffect(() => {
     if (!roomId) return
-    const unsub = subscribeToPlayers(roomId, setLivePlayers)
+    const unsub = abonnerJoueurs(roomId, setLivePlayers)
     return unsub
   }, [roomId])
 
+  // Abonnement salon (enseignant)
+  useEffect(() => {
+    if (!roomId || screen !== S.DASHBOARD) return
+    const unsub = abonnerSalon(roomId, setSalon)
+    return unsub
+  }, [roomId, screen])
+
+  // Joueur : réagir aux changements du salon
+  useEffect(() => {
+    if (!live.salon || screen === S.DASHBOARD) return
+    const { statut, questionCourante } = live.salon
+
+    if (statut === 'attente' && screen !== S.LOBBY) {
+      setScreen(S.LOBBY)
+    } else if (statut === 'en-cours') {
+      if (screen === S.LOBBY || screen === S.WAITING) {
+        setScreen(S.QUIZ_LIVE)
+      }
+      if (screen === S.WAITING && !live.aDejaRepondu) {
+        setScreen(S.QUIZ_LIVE)
+      }
+    } else if (statut === 'termine') {
+      const score = live.scoreActuel
+      const diff = Math.floor((new Date() - (quiz.startTime || new Date())) / 1000)
+      const m = String(Math.floor(diff / 60)).padStart(2, '0')
+      const s = String(diff % 60).padStart(2, '0')
+      const timeSpent = `${m}:${s}`
+      saveToLeaderboard(username, score, timeSpent, groups)
+      setLeaderboard(loadLeaderboard())
+      setFinalResult({ score, answers: live.reponsesFinales, timeSpent })
+      setScreen(S.RESULT)
+    }
+  }, [live.salon])
+
+  // SOLO
   async function handleJoin(name, code) {
     setUsername(name)
+    quiz.reset()
+
     if (code && code.length === 6) {
       if (!isFirebaseConfigured || !userId) {
         showToast('Firebase non configuré. Mode solo activé.')
-      } else {
-        setRoomId(code)
-        await registerPlayer(code, userId, name)
-        showToast(`Salon ${code} rejoint !`)
+        setScreen(S.QUIZ)
+        return
       }
+      setRoomId(code)
+      await inscrireJoueur(code, userId, name)
+      setScreen(S.LOBBY)
+      return
     }
-    quiz.reset()
     setScreen(S.QUIZ)
   }
 
-  async function handleConfirm() {
+  async function handleConfirmSolo() {
     const result = quiz.confirm()
     if (!result) return
-
-    if (roomId && userId) {
-      await updateProgress(roomId, userId, quiz.currentIndex + 1, result.score, false)
-    }
-
     if (result.done) {
       const { score, answers, timeSpent } = result
-      if (roomId && userId) {
-        await updateProgress(roomId, userId, questions.length, score, true, timeSpent)
-      }
       saveToLeaderboard(username, score, timeSpent, groups)
       setLeaderboard(loadLeaderboard())
       setFinalResult({ score, answers, timeSpent })
@@ -101,19 +140,56 @@ export default function App() {
     }
   }
 
+  // LIVE — joueur répond
+  async function handleReponseLive(indiceChoisi) {
+    const res = await live.soumettre(indiceChoisi)
+    if (!res) return
+    setDernierReponse({ estCorrect: res.estCorrect, indice: live.indiceQuestion })
+    setScreen(S.WAITING)
+  }
+
+  // ENSEIGNANT — créer session
   async function handleCreateSession() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
     let code = ''
     for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)]
     setRoomId(code)
     setLivePlayers([])
+    setSalon({ statut: 'attente', questionCourante: -1 })
+    await creerSalon(code, questions.length)
     setScreen(S.DASHBOARD)
     showToast(`Salon créé : ${code}`)
   }
 
-  function handleLeaveRoom() {
+  async function handleLancer() {
+    await lancerPartie(roomId)
+    setSalon(s => ({ ...s, statut: 'en-cours', questionCourante: 0 }))
+  }
+
+  async function handleQuestionSuivante(prochaineIndex) {
+    await passerQuestionSuivante(roomId, prochaineIndex, questions.length)
+    if (prochaineIndex >= questions.length) {
+      setSalon(s => ({ ...s, statut: 'termine' }))
+    } else {
+      setSalon(s => ({ ...s, questionCourante: prochaineIndex }))
+    }
+  }
+
+  function handleTerminer() {
+    if (livePlayers.length > 0) setScreen(S.PODIUM)
+    else handleCloseSession()
+  }
+
+  function handleCloseSession() {
+    terminerSalon(roomId).catch(() => {})
     setRoomId(null)
     setLivePlayers([])
+    setSalon(null)
+    setScreen(S.WELCOME)
+  }
+
+  function handleLeaveRoom() {
+    setRoomId(null)
     quiz.reset()
     setFinalResult(null)
     setScreen(S.WELCOME)
@@ -123,12 +199,7 @@ export default function App() {
   function handleRestart() {
     quiz.reset()
     setFinalResult(null)
-    setScreen(S.WELCOME)
-  }
-
-  function handleCloseSession() {
     setRoomId(null)
-    setLivePlayers([])
     setScreen(S.WELCOME)
   }
 
@@ -142,13 +213,9 @@ export default function App() {
       />
 
       <main className="flex-grow max-w-6xl w-full mx-auto px-4 py-6 md:py-10 flex flex-col justify-center">
+
         {screen === S.WELCOME && (
-          <ScreenWelcome
-            meta={meta}
-            onJoin={handleJoin}
-            onCreateSession={handleCreateSession}
-            leaderboard={leaderboard}
-          />
+          <ScreenWelcome meta={meta} onJoin={handleJoin} onCreateSession={handleCreateSession} leaderboard={leaderboard} />
         )}
 
         {screen === S.QUIZ && (
@@ -159,7 +226,29 @@ export default function App() {
             selectedOption={quiz.selectedOption}
             startTime={quiz.startTime}
             onSelect={quiz.select}
-            onConfirm={handleConfirm}
+            onConfirm={handleConfirmSolo}
+          />
+        )}
+
+        {screen === S.LOBBY && (
+          <ScreenLobby prenom={username} codeS={roomId} joueurs={livePlayers} />
+        )}
+
+        {screen === S.QUIZ_LIVE && live.questionCourante && (
+          <ScreenQuizLive
+            question={live.questionCourante}
+            indice={live.indiceQuestion}
+            total={questions.length}
+            questionDemarreeA={live.questionDemarreeA}
+            onRepondre={handleReponseLive}
+          />
+        )}
+
+        {screen === S.WAITING && dernierReponse && (
+          <ScreenWaiting
+            estCorrect={dernierReponse.estCorrect}
+            indice={dernierReponse.indice}
+            total={questions.length}
           />
         )}
 
@@ -176,11 +265,7 @@ export default function App() {
         )}
 
         {screen === S.REVIEW && finalResult && (
-          <ScreenReview
-            questions={questions}
-            answers={finalResult.answers}
-            onBack={() => setScreen(S.RESULT)}
-          />
+          <ScreenReview questions={questions} answers={finalResult.answers} onBack={() => setScreen(S.RESULT)} />
         )}
 
         {screen === S.DASHBOARD && (
@@ -188,10 +273,10 @@ export default function App() {
             roomCode={roomId}
             players={livePlayers}
             totalQuestions={questions.length}
-            onPodium={() => {
-              if (livePlayers.length === 0) { showToast('Aucun participant connecté.'); return }
-              setScreen(S.PODIUM)
-            }}
+            salon={salon}
+            onLancer={handleLancer}
+            onQuestionSuivante={handleQuestionSuivante}
+            onTerminer={handleTerminer}
             onClose={handleCloseSession}
           />
         )}

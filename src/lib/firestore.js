@@ -1,28 +1,114 @@
 import {
-  doc, setDoc, updateDoc, collection,
+  doc, setDoc, updateDoc, getDoc, collection,
   onSnapshot, serverTimestamp
 } from 'firebase/firestore'
 import { db, isFirebaseConfigured } from './firebase'
 
-function getGroup(score) {
+function getGroupe(score) {
   if (score <= 4) return 'Insuffisant'
   if (score <= 8) return 'Améliorable'
   return 'Expert'
 }
 
-export async function registerPlayer(roomId, userId, username) {
+// ── SALON ──────────────────────────────────────────────────────────────────
+
+export async function creerSalon(codeS, totalQuestions) {
   if (!isFirebaseConfigured || !db) return
-  const ref = doc(db, 'rooms', roomId, 'players', userId)
+  const ref = doc(db, 'rooms', codeS)
   await setDoc(ref, {
-    userId,
-    username,
-    progress: 0,
-    score: 0,
-    status: 'En cours',
-    group: 'En attente',
-    timeSpent: '00:00',
-    lastUpdated: serverTimestamp()
+    statut: 'attente',
+    questionCourante: -1,
+    questionDemarreeA: null,
+    totalQuestions,
+    creeA: serverTimestamp()
   })
+}
+
+export async function lancerPartie(codeS) {
+  if (!isFirebaseConfigured || !db) return
+  const ref = doc(db, 'rooms', codeS)
+  await updateDoc(ref, {
+    statut: 'en-cours',
+    questionCourante: 0,
+    questionDemarreeA: serverTimestamp()
+  })
+}
+
+export async function passerQuestionSuivante(codeS, prochaineIndex, total) {
+  if (!isFirebaseConfigured || !db) return
+  const ref = doc(db, 'rooms', codeS)
+  if (prochaineIndex >= total) {
+    await updateDoc(ref, { statut: 'termine', questionCourante: prochaineIndex })
+  } else {
+    await updateDoc(ref, {
+      questionCourante: prochaineIndex,
+      questionDemarreeA: serverTimestamp()
+    })
+  }
+}
+
+export async function terminerSalon(codeS) {
+  if (!isFirebaseConfigured || !db) return
+  const ref = doc(db, 'rooms', codeS)
+  await updateDoc(ref, { statut: 'termine' })
+}
+
+export function abonnerSalon(codeS, callback) {
+  if (!isFirebaseConfigured || !db) return () => {}
+  const ref = doc(db, 'rooms', codeS)
+  return onSnapshot(ref, (snap) => {
+    if (snap.exists()) callback(snap.data())
+  }, (err) => console.error('Erreur écoute salon:', err))
+}
+
+// ── JOUEURS ────────────────────────────────────────────────────────────────
+
+export async function inscrireJoueur(codeS, idUtilisateur, prenom) {
+  if (!isFirebaseConfigured || !db) return
+  const ref = doc(db, 'rooms', codeS, 'players', idUtilisateur)
+  await setDoc(ref, {
+    idUtilisateur,
+    prenom,
+    reponses: {},
+    score: 0,
+    statut: 'attente',
+    groupe: 'En attente',
+    tempsPasse: '00:00',
+    derniereMiseAJour: serverTimestamp()
+  })
+}
+
+export async function soumettreReponse(codeS, idUtilisateur, indiceQuestion, indiceChoisi, scoreTotal, estTermine, tempsPasse) {
+  if (!isFirebaseConfigured || !db) return
+  const ref = doc(db, 'rooms', codeS, 'players', idUtilisateur)
+  const snap = await getDoc(ref)
+  const reponsesActuelles = snap.exists() ? (snap.data().reponses || {}) : {}
+  const nouvellesReponses = { ...reponsesActuelles, [indiceQuestion]: indiceChoisi }
+
+  await updateDoc(ref, {
+    reponses: nouvellesReponses,
+    score: scoreTotal,
+    statut: estTermine ? 'termine' : 'en-cours',
+    groupe: estTermine ? getGroupe(scoreTotal) : 'En cours',
+    tempsPasse: estTermine ? tempsPasse : '00:00',
+    derniereMiseAJour: serverTimestamp()
+  })
+}
+
+export function abonnerJoueurs(codeS, callback) {
+  if (!isFirebaseConfigured || !db) return () => {}
+  const ref = collection(db, 'rooms', codeS, 'players')
+  return onSnapshot(ref, (snap) => {
+    const joueurs = []
+    snap.forEach(d => joueurs.push(d.data()))
+    callback(joueurs)
+  }, (err) => console.error('Erreur écoute joueurs:', err))
+}
+
+// ── LEGACY (mode progression individuelle — gardé pour solo) ───────────────
+
+export async function registerPlayer(roomId, userId, username) {
+  return inscrireJoueur(roomId, userId, username)
 }
 
 export async function updateProgress(roomId, userId, progress, score, isFinished = false, timeSpent = '00:00') {
@@ -32,18 +118,12 @@ export async function updateProgress(roomId, userId, progress, score, isFinished
     progress,
     score,
     status: isFinished ? 'Terminé' : 'En cours',
-    group: isFinished || progress > 0 ? getGroup(score) : 'En attente',
+    group: isFinished || progress > 0 ? getGroupe(score) : 'En attente',
     timeSpent,
     lastUpdated: serverTimestamp()
   })
 }
 
 export function subscribeToPlayers(roomId, callback) {
-  if (!isFirebaseConfigured || !db) return () => {}
-  const ref = collection(db, 'rooms', roomId, 'players')
-  return onSnapshot(ref, (snapshot) => {
-    const players = []
-    snapshot.forEach(d => players.push(d.data()))
-    callback(players)
-  }, (err) => console.error('Firestore listen error:', err))
+  return abonnerJoueurs(roomId, callback)
 }
