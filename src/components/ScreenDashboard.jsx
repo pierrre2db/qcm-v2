@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import QRious from 'qrious'
 
-const DUREE_QUESTION = 60
+const DUREE_QUESTION = 30
 
 export function ScreenDashboard({ roomCode, players, totalQuestions, salon, onLancer, onQuestionSuivante, onTerminer, onClose }) {
   const qrRef = useRef(null)

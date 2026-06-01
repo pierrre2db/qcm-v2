@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Md } from './Md'
 
-const DUREE_QUESTION = 60
+const DUREE_QUESTION = 30
 
 const ANSWER_STYLES = [
   { bg: 'bg-[#E21B3C]', hover: 'hover:bg-[#c5182f] active:bg-[#a81427]', shadow: 'shadow-[#E21B3C]/40', shape: '▲', label: 'A' },
@@ -39,32 +39,47 @@ export function ScreenQuizLive({ question, indice, total, questionDemarreeA, onR
     await onRepondre(idx)
   }
 
-  const pctTimer = (secondesRestantes / DUREE_QUESTION) * 100
-  const timerColor = secondesRestantes > 30 ? 'bg-emerald-400' : secondesRestantes > 10 ? 'bg-amber-400' : 'bg-rose-400'
-  const timerPulse = secondesRestantes <= 10 ? 'animate-pulse' : ''
+  const pctTimer = secondesRestantes / DUREE_QUESTION
+  const timerStrokeColor = secondesRestantes > 15 ? '#4ade80' : secondesRestantes > 8 ? '#fbbf24' : '#f87171'
+  const RADIUS = 36
+  const CIRCUMFERENCE = 2 * Math.PI * RADIUS
 
   return (
     <div className="space-y-4">
 
       {/* Timer + progression */}
-      <div className="space-y-2">
-        <div className="flex justify-between items-center">
+      <div className="flex items-center gap-4">
+        {/* Circular timer */}
+        <div className="relative shrink-0 flex items-center justify-center" style={{ width: 88, height: 88 }}>
+          <svg width="88" height="88" className="-rotate-90">
+            {/* Track */}
+            <circle cx="44" cy="44" r={RADIUS} fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="7" />
+            {/* Progress */}
+            <circle
+              cx="44" cy="44" r={RADIUS}
+              fill="none"
+              stroke={timerStrokeColor}
+              strokeWidth="7"
+              strokeLinecap="round"
+              strokeDasharray={CIRCUMFERENCE}
+              strokeDashoffset={CIRCUMFERENCE * (1 - pctTimer)}
+              style={{ transition: 'stroke-dashoffset 0.5s linear, stroke 0.5s' }}
+            />
+          </svg>
+          <span className={`absolute font-black text-xl text-white ${secondesRestantes <= 8 ? 'animate-pulse' : ''}`}>
+            {secondesRestantes}
+          </span>
+        </div>
+
+        {/* Question progress */}
+        <div className="flex-1 space-y-1.5">
           <span className="text-white/70 text-xs font-bold uppercase tracking-widest">
             Question {indice + 1} / {total}
           </span>
-          <span className={`font-black text-2xl text-white ${secondesRestantes <= 10 ? 'animate-pulse text-rose-300' : ''}`}>
-            {secondesRestantes}s
-          </span>
-        </div>
-        {/* Overall progress */}
-        <div className="w-full bg-white/20 h-1.5 rounded-full overflow-hidden">
-          <div className="bg-white/60 h-full transition-all duration-500 rounded-full"
-            style={{ width: `${((indice + 1) / total) * 100}%` }} />
-        </div>
-        {/* Timer bar */}
-        <div className="w-full bg-white/20 h-3 rounded-full overflow-hidden">
-          <div className={`${timerColor} ${timerPulse} h-full transition-all duration-500 rounded-full`}
-            style={{ width: `${pctTimer}%` }} />
+          <div className="w-full bg-white/20 h-2 rounded-full overflow-hidden">
+            <div className="bg-white/60 h-full transition-all duration-500 rounded-full"
+              style={{ width: `${((indice + 1) / total) * 100}%` }} />
+          </div>
         </div>
       </div>
 
