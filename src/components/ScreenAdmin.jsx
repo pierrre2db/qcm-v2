@@ -11,7 +11,9 @@ function formatDate(ts) {
 function buildPrompt(sujet, nombre) {
   const s = sujet || '[SUJET]'
   const n = nombre || 10
-  return `Génère exactement ${n} questions de quiz sur le sujet "${s}" en utilisant strictement ce template JSON :
+  return `En te basant exclusivement sur les documents sources de ce notebook, génère exactement ${n} questions de quiz sur le thème "${s}".
+
+Utilise strictement ce format JSON, sans aucun texte avant ni après :
 
 {
   "titre_quiz": "${s}",
@@ -27,18 +29,19 @@ function buildPrompt(sujet, nombre) {
         "D": "Quatrième réponse"
       },
       "bonne_reponse": "A",
-      "pourquoi": "Explication didactique. Mets en **gras** les points clés.\\n- Point important 1\\n- Point important 2"
+      "pourquoi": "Explication tirée des documents. Mets en **gras** les points clés.\\n- Point important 1\\n- Point important 2"
     }
   ]
 }
 
-Instructions strictes :
-- Génère exactement ${n} questions variées et pertinentes sur "${s}"
-- Utilise **gras** et *italique* pour mettre en évidence les termes importants dans les questions, options et explications
+Règles obligatoires :
+- Toutes les questions et réponses doivent être ancrées dans les documents sources
+- Génère exactement ${n} questions couvrant des aspects variés du thème "${s}"
+- Utilise **gras** et *italique* pour les termes importants dans les questions, options et explications
 - La difficulté va de 1 (très facile) à 5 (expert) — varie les niveaux
-- Chaque explication (pourquoi) doit être didactique, détaillée et structurée
-- JSON parfaitement valide obligatoire : les retours à la ligne dans le texte s'écrivent \\n, les guillemets s'échappent \\"
-- Ne génère QUE le JSON brut, sans texte avant ni après, sans balises Markdown \`\`\``
+- L'explication (pourquoi) doit citer ou paraphraser la source du document
+- JSON parfaitement valide : retours à la ligne = \\n, guillemets = \\"
+- Réponds UNIQUEMENT avec le JSON brut, sans balises Markdown \`\`\``
 }
 
 const JSON_FORMAT_EXEMPLE = `{
@@ -165,8 +168,8 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onBack }) {
       <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-6 rounded-3xl shadow-xl space-y-5 text-white">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="font-extrabold text-lg">Générer un quiz avec Claude</h3>
-            <p className="text-slate-400 text-xs mt-0.5">Remplis le sujet → copie le prompt → colle dans Claude → récupère le JSON</p>
+            <h3 className="font-extrabold text-lg">Générer un quiz avec NotebookLM</h3>
+            <p className="text-slate-400 text-xs mt-0.5">Remplis le sujet → copie le prompt → colle dans NotebookLM → récupère le JSON</p>
           </div>
           <button
             onClick={() => setShowFormat(v => !v)}
