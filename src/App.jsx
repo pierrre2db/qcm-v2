@@ -20,7 +20,7 @@ import {
   creerSalon, inscrireJoueur, lancerPartie,
   passerQuestionSuivante, terminerSalon,
   abonnerSalon, abonnerJoueurs,
-  listerQuizzes, chargerQuizParId, lireRoom
+  abonnerQuizzes, chargerQuizParId, lireRoom
 } from './lib/firestore'
 
 const S = {
@@ -82,10 +82,11 @@ export default function App() {
   useEffect(() => {
     if (!isFirebaseConfigured) return
     signInAnon().then(user => { if (user) setUserId(user.uid) })
-    listerQuizzes().then(list => {
+    const unsub = abonnerQuizzes(list => {
       setQuizList(list)
-      if (list.length > 0) setSelectedQuizId(list[0].id)
+      setSelectedQuizId(prev => prev ?? (list.length > 0 ? list[0].id : null))
     })
+    return unsub
   }, [])
 
   // ── Quiz selection ──────────────────────────────────────────────────────
@@ -114,8 +115,11 @@ export default function App() {
     const { statut } = live.salon
     if (statut === 'attente' && screen !== S.LOBBY) setScreen(S.LOBBY)
     else if (statut === 'en-cours') {
-      if (screen === S.LOBBY || screen === S.WAITING) setScreen(S.QUIZ_LIVE)
-      if (screen === S.WAITING && !live.aDejaRepondu) setScreen(S.QUIZ_LIVE)
+      const enAttenteOuLobby = screen === S.LOBBY || screen === S.WAITING || screen === S.WELCOME
+      if (enAttenteOuLobby) {
+        if (live.aDejaRepondu) setScreen(S.WAITING)
+        else setScreen(S.QUIZ_LIVE)
+      }
     } else if (statut === 'termine') {
       const score = live.scoreActuel
       const diff = Math.floor((new Date() - (quiz.startTime || new Date())) / 1000)

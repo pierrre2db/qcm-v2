@@ -111,6 +111,15 @@ export async function listerQuizzes() {
   }
 }
 
+export function abonnerQuizzes(callback) {
+  if (!isFirebaseConfigured || !db) return () => {}
+  return onSnapshot(
+    query(collection(db, 'quizzes'), orderBy('creeA', 'desc')),
+    snap => callback(snap.docs.map(d => ({ id: d.id, title: d.data().title, questionCount: d.data().questionCount, creeA: d.data().creeA }))),
+    err => console.error('abonnerQuizzes:', err)
+  )
+}
+
 export async function ajouterQuiz(rawData, title, questionCount) {
   if (!isFirebaseConfigured || !db) return null
   const ref = await addDoc(collection(db, 'quizzes'), {
