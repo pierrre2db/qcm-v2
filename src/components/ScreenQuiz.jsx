@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Md } from './Md'
 
 export function ScreenQuiz({ currentQuestion, currentIndex, totalQuestions, selectedOption, startTime, onSelect, onConfirm }) {
   const [elapsed, setElapsed] = useState('00:00')
@@ -24,10 +25,7 @@ export function ScreenQuiz({ currentQuestion, currentIndex, totalQuestions, sele
           <span className="text-slate-400 bg-slate-100 px-2 py-1 rounded-md">{elapsed}</span>
         </div>
         <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-          <div
-            className="bg-emerald-500 h-full transition-all duration-300"
-            style={{ width: `${progress}%` }}
-          />
+          <div className="bg-emerald-500 h-full transition-all duration-300" style={{ width: `${progress}%` }} />
         </div>
       </div>
 
@@ -35,12 +33,12 @@ export function ScreenQuiz({ currentQuestion, currentIndex, totalQuestions, sele
       <div className="bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden">
         <div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-3 flex justify-between items-center">
           <span className="text-white/90 text-xs font-bold uppercase tracking-wider">{currentQuestion.category}</span>
-          <span className="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">AFSCA BPH</span>
+          <span className="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Solo</span>
         </div>
 
         <div className="p-6 md:p-8 space-y-6">
           <h3 className="text-lg md:text-xl font-bold text-slate-900 leading-snug">
-            {currentQuestion.question}
+            <Md>{currentQuestion.question}</Md>
           </h3>
 
           <div className="grid grid-cols-1 gap-3.5">
@@ -58,13 +56,12 @@ export function ScreenQuiz({ currentQuestion, currentIndex, totalQuestions, sele
                     }`}
                 >
                   <span className={`flex items-center justify-center w-7 h-7 rounded-lg font-bold text-sm transition-colors uppercase select-none shrink-0
-                    ${isSelected
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-slate-100 text-slate-500 group-hover:bg-emerald-100 group-hover:text-emerald-700'
-                    }`}>
+                    ${isSelected ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-emerald-100 group-hover:text-emerald-700'}`}>
                     {String.fromCharCode(65 + idx)}
                   </span>
-                  <span className="text-slate-700 font-medium text-sm md:text-base pt-0.5 leading-relaxed">{option}</span>
+                  <span className="text-slate-700 font-medium text-sm md:text-base pt-0.5 leading-relaxed">
+                    <Md>{option}</Md>
+                  </span>
                 </button>
               )
             })}

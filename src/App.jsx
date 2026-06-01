@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import afscaData from './data/afsca.json'
+import { normalizeQuiz } from './lib/normalizeQuiz'
 import { Header } from './components/Header'
 import { ScreenWelcome } from './components/ScreenWelcome'
 import { ScreenQuiz } from './components/ScreenQuiz'
@@ -48,7 +49,7 @@ function saveToLeaderboard(name, score, time, groups) {
 }
 
 export default function App() {
-  const { meta, groups, questions } = afscaData
+  const { meta, groups, questions } = normalizeQuiz(afscaData)
 
   const [screen, setScreen] = useState(S.WELCOME)
   const [username, setUsername] = useState('')

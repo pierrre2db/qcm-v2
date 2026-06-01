@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Md } from './Md'
 
 const DUREE_QUESTION = 60
 
@@ -64,7 +65,7 @@ export function ScreenQuizLive({ question, indice, total, questionDemarreeA, onR
         </div>
 
         <div className="p-6 md:p-8 space-y-4">
-          <h3 className="text-lg md:text-xl font-bold text-slate-900 leading-snug">{question.question}</h3>
+          <h3 className="text-lg md:text-xl font-bold text-slate-900 leading-snug"><Md>{question.question}</Md></h3>
           <div className="grid grid-cols-1 gap-3">
             {question.options.map((option, idx) => {
               const estSelectionne = selectionne === idx
@@ -86,7 +87,7 @@ export function ScreenQuizLive({ question, indice, total, questionDemarreeA, onR
                     ${estSelectionne ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-emerald-100 group-hover:text-emerald-700'}`}>
                     {String.fromCharCode(65 + idx)}
                   </span>
-                  <span className="text-slate-700 font-medium text-sm md:text-base pt-0.5 leading-relaxed">{option}</span>
+                  <span className="text-slate-700 font-medium text-sm md:text-base pt-0.5 leading-relaxed"><Md>{option}</Md></span>
                 </button>
               )
             })}
