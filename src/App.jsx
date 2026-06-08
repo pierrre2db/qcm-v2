@@ -12,7 +12,6 @@ import { ScreenReview } from './components/ScreenReview'
 import { ScreenDashboard } from './components/ScreenDashboard'
 import { ScreenPodium } from './components/ScreenPodium'
 import { ScreenAdmin } from './components/ScreenAdmin'
-import { ScreenTeacherStart } from './components/ScreenTeacherStart'
 import { Toast, useToast } from './components/Toast'
 import { useQuizStore } from './hooks/useQuizStore'
 import { useLiveQuiz } from './hooks/useLiveQuiz'
@@ -32,7 +31,6 @@ const S = {
   WAITING: 'waiting',
   RESULT: 'result',
   REVIEW: 'review',
-  TEACHER_START: 'teacher_start',
   DASHBOARD: 'dashboard',
   PODIUM: 'podium',
   ADMIN: 'admin',
@@ -258,49 +256,6 @@ export default function App() {
   }
 
   const isDark = [S.LOBBY, S.QUIZ_LIVE, S.WAITING].includes(screen)
-  const isFullscreen = [S.TEACHER_START, S.DASHBOARD, S.ADMIN].includes(screen)
-
-  if (isFullscreen) {
-    return (
-      <div className="min-h-screen selection:bg-violet-400 selection:text-white">
-        {screen === S.TEACHER_START && (
-          <ScreenTeacherStart
-            quizList={quizList}
-            selectedQuizId={selectedQuizId}
-            onSelectQuiz={handleSelectQuiz}
-            onCreateSession={handleCreateSession}
-            onBack={() => setScreen(S.WELCOME)}
-          />
-        )}
-        {screen === S.DASHBOARD && (
-          <ScreenDashboard
-            roomCode={roomId}
-            players={livePlayers}
-            totalQuestions={questions.length}
-            salon={salon}
-            currentQuestion={questions[salon?.questionCourante] ?? null}
-            currentCorrectIndex={questions[salon?.questionCourante]?.correctIndex ?? -1}
-            onLancer={handleLancer}
-            onQuestionSuivante={handleQuestionSuivante}
-            onTerminer={handleTerminer}
-            onClose={handleCloseSession}
-          />
-        )}
-        {screen === S.ADMIN && (
-          <ScreenAdmin
-            quizList={quizList}
-            onQuizAdded={({ id, title, questionCount }) => {
-              setQuizList(prev => [{ id, title, questionCount }, ...prev])
-              showToast('Quiz ajouté !')
-            }}
-            onQuizDeleted={id => setQuizList(prev => prev.filter(q => q.id !== id))}
-            onBack={() => setScreen(S.WELCOME)}
-          />
-        )}
-        <Toast message={toastMsg} />
-      </div>
-    )
-  }
 
   return (
     <div className={`min-h-screen flex flex-col selection:bg-violet-400 selection:text-white transition-colors duration-300 ${isDark ? 'bg-[#46178F]' : 'bg-slate-50 text-slate-800'}`}>
@@ -318,7 +273,7 @@ export default function App() {
           <ScreenWelcome
             meta={meta}
             onJoin={handleJoin}
-            onCreateSession={() => setScreen(S.TEACHER_START)}
+            onCreateSession={handleCreateSession}
             leaderboard={leaderboard}
             onAdmin={handleAdminAccess}
             quizList={quizList}
@@ -377,6 +332,21 @@ export default function App() {
           <ScreenReview questions={questions} answers={finalResult.answers} onBack={() => setScreen(S.RESULT)} />
         )}
 
+        {screen === S.DASHBOARD && (
+          <ScreenDashboard
+            roomCode={roomId}
+            players={livePlayers}
+            totalQuestions={questions.length}
+            salon={salon}
+            currentQuestion={questions[salon?.questionCourante] ?? null}
+            currentCorrectIndex={questions[salon?.questionCourante]?.correctIndex ?? -1}
+            onLancer={handleLancer}
+            onQuestionSuivante={handleQuestionSuivante}
+            onTerminer={handleTerminer}
+            onClose={handleCloseSession}
+          />
+        )}
+
         {screen === S.PODIUM && (
           <ScreenPodium
             players={livePlayers}
@@ -385,6 +355,17 @@ export default function App() {
           />
         )}
 
+        {screen === S.ADMIN && (
+          <ScreenAdmin
+            quizList={quizList}
+            onQuizAdded={({ id, title, questionCount }) => {
+              setQuizList(prev => [{ id, title, questionCount }, ...prev])
+              showToast('Quiz ajouté !')
+            }}
+            onQuizDeleted={id => setQuizList(prev => prev.filter(q => q.id !== id))}
+            onBack={() => setScreen(S.WELCOME)}
+          />
+        )}
       </main>
 
       <footer className="bg-white border-t border-slate-100 py-4 text-center text-xs text-slate-400">
