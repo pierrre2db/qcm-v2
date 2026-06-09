@@ -1,18 +1,30 @@
+import { useEffect, useState } from 'react'
+
 export function ScreenResult({ username, score, totalQuestions, timeSpent, groups, onRestart, onReview }) {
   const group = groups.find(g => score <= g.maxScore) || groups[groups.length - 1]
 
   const colorMap = {
-    red: { border: '#ef4444', badge: 'bg-rose-100 text-rose-800' },
-    amber: { border: '#f59e0b', badge: 'bg-amber-100 text-amber-800' },
-    green: { border: '#10b981', badge: 'bg-emerald-100 text-emerald-800' },
+    red:   { stroke: '#ef4444', badge: 'bg-rose-100 text-rose-800' },
+    amber: { stroke: '#f59e0b', badge: 'bg-amber-100 text-amber-800' },
+    green: { stroke: '#10b981', badge: 'bg-emerald-100 text-emerald-800' },
   }
   const colors = colorMap[group.color] || colorMap.green
   const percentage = Math.round((score / totalQuestions) * 100)
 
+  const RADIUS = 54
+  const CIRCUMFERENCE = 2 * Math.PI * RADIUS
+  const targetOffset = CIRCUMFERENCE * (1 - percentage / 100)
+  const [ringOffset, setRingOffset] = useState(CIRCUMFERENCE)
+
+  useEffect(() => {
+    const t = setTimeout(() => setRingOffset(targetOffset), 200)
+    return () => clearTimeout(t)
+  }, [targetOffset])
+
   const feedbackLines = group.feedback.split('\n\n')
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-fade-up">
       <div className="text-center space-y-2">
         <span className="bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wide">Évaluation Terminée</span>
         <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">
@@ -22,19 +34,30 @@ export function ScreenResult({ username, score, totalQuestions, timeSpent, group
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-        {/* Score circle */}
+        {/* Animated score ring */}
         <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50 md:col-span-5 flex flex-col items-center justify-center text-center space-y-4">
           <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Votre Note Globale</span>
-          <div className="relative w-36 h-36 flex items-center justify-center">
-            <div
-              className="absolute inset-0 rounded-full border-8"
-              style={{ borderColor: colors.border }}
-            />
-            <div className="text-center">
+
+          <div className="relative flex items-center justify-center animate-scale-in" style={{ width: 144, height: 144 }}>
+            <svg width="144" height="144" className="-rotate-90">
+              <circle cx="72" cy="72" r={RADIUS} fill="none" stroke="#f1f5f9" strokeWidth="10" />
+              <circle
+                cx="72" cy="72" r={RADIUS}
+                fill="none"
+                stroke={colors.stroke}
+                strokeWidth="10"
+                strokeLinecap="round"
+                strokeDasharray={CIRCUMFERENCE}
+                strokeDashoffset={ringOffset}
+                style={{ transition: 'stroke-dashoffset 1.2s cubic-bezier(0.4, 0, 0.2, 1)' }}
+              />
+            </svg>
+            <div className="absolute text-center">
               <span className="text-4xl font-extrabold text-slate-800">{score}</span>
               <span className="text-slate-400 block text-sm font-semibold mt-0.5">/ {totalQuestions}</span>
             </div>
           </div>
+
           <div className="space-y-1">
             <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase inline-block ${colors.badge}`}>{group.label}</span>
             <h4 className="font-extrabold text-slate-800 text-lg">{group.title}</h4>

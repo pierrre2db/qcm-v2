@@ -66,18 +66,23 @@ export function ScreenWelcome({ meta, onJoin, onCreateSession, leaderboard, onAd
     <div className="space-y-6">
 
       {/* Hero */}
-      <div className="text-center space-y-2">
-        <span className="bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1.5 rounded-full tracking-wide uppercase">
+      <div className="text-center space-y-3 animate-fade-up">
+        <span className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-black px-4 py-1.5 rounded-full tracking-wide uppercase shadow-md shadow-emerald-200/60">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white/60" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
+          </span>
           {meta.badge}
         </span>
         <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
           Défi Hygiène &amp; Sécurité Alimentaire
         </h2>
+        <p className="text-slate-500 text-sm">Testez vos connaissances ou rejoignez votre classe.</p>
       </div>
 
       {/* ── MODE CHOOSER (if no mode locked yet) ── */}
       {!mode ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fade-up" style={{ animationDelay: '0.08s' }}>
           {/* Solo card */}
           <button
             onClick={() => switchMode('solo')}
@@ -120,7 +125,7 @@ export function ScreenWelcome({ meta, onJoin, onCreateSession, leaderboard, onAd
         </div>
       ) : (
         /* ── FORM CARD (after mode chosen) ── */
-        <div className="bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden">
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden animate-fade-up" style={{ animationDelay: '0.08s' }}>
 
           {/* Mode header bar */}
           <div className={`flex items-center justify-between px-6 py-4 border-b border-slate-100 ${mode === 'solo' ? 'bg-emerald-50' : 'bg-violet-50'}`}>
@@ -268,7 +273,7 @@ export function ScreenWelcome({ meta, onJoin, onCreateSession, leaderboard, onAd
       )}
 
       {/* Teacher section */}
-      <div className="bg-gradient-to-br from-slate-900 to-emerald-950 text-white p-6 md:p-8 rounded-3xl shadow-xl">
+      <div className="bg-gradient-to-br from-slate-900 to-emerald-950 text-white p-6 md:p-8 rounded-3xl shadow-xl animate-fade-up" style={{ animationDelay: '0.14s' }}>
         <div className="flex flex-col md:flex-row md:items-center gap-6">
           <div className="flex-1 space-y-3">
             <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest">Espace Enseignant</span>
@@ -309,7 +314,7 @@ export function ScreenWelcome({ meta, onJoin, onCreateSession, leaderboard, onAd
       </div>
 
       {/* Solo leaderboard */}
-      <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-lg shadow-slate-200/40 space-y-4">
+      <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-lg shadow-slate-200/40 space-y-4 animate-fade-up" style={{ animationDelay: '0.2s' }}>
         <h3 className="font-bold text-slate-800 flex items-center space-x-2">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5a2 2 0 10-2 2h2zm0 0h4l-1 3h-3m1 3h3l-1-3h-3m-2 0h-3l1 3h3M4 19h16" />

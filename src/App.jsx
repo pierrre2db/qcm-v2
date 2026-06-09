@@ -258,7 +258,7 @@ export default function App() {
   const isDark = [S.LOBBY, S.QUIZ_LIVE, S.WAITING].includes(screen)
 
   return (
-    <div className={`min-h-screen flex flex-col selection:bg-violet-400 selection:text-white transition-colors duration-300 ${isDark ? 'bg-[#46178F]' : 'bg-slate-50 text-slate-800'}`}>
+    <div className={`min-h-screen flex flex-col selection:bg-violet-400 selection:text-white transition-colors duration-300 ${isDark ? 'bg-[#46178F]' : 'bg-gradient-to-br from-slate-50 via-white to-emerald-50 text-slate-800'}`}>
       <Header
         meta={meta}
         username={username || null}
