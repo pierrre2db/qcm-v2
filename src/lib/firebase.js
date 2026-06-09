@@ -22,7 +22,7 @@ if (isFirebaseConfigured) {
   db = getFirestore(app)
 }
 
-export { app, auth, db }
+export { auth, db }
 
 export async function signInAnon() {
   if (!isFirebaseConfigured || !auth) return null
