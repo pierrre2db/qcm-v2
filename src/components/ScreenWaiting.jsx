@@ -1,30 +1,23 @@
-export function ScreenWaiting({ estCorrect, indice, total }) {
+export function ScreenWaiting({ indice, total }) {
   const estDerniere = indice >= total - 1
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[65vh] space-y-8 text-center">
 
-      {/* Big result icon */}
-      <div className={`w-32 h-32 rounded-full flex items-center justify-center shadow-2xl
-        ${estCorrect ? 'bg-[#26890C] shadow-[#26890C]/40' : 'bg-[#E21B3C] shadow-[#E21B3C]/40'}`}>
-        {estCorrect ? (
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-          </svg>
-        ) : (
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        )}
+      {/* Neutral icon */}
+      <div className="w-32 h-32 rounded-full flex items-center justify-center shadow-2xl bg-white/20 shadow-white/10">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+        </svg>
       </div>
 
       {/* Message */}
       <div className="space-y-2">
         <h2 className="text-4xl font-black text-white tracking-tight">
-          {estCorrect ? 'Bonne réponse !' : 'Pas tout à fait…'}
+          Réponse enregistrée !
         </h2>
         <p className="text-white/70 text-base font-semibold">
-          {estDerniere ? 'En attente des résultats finaux…' : `Question ${indice + 1} / ${total} terminée`}
+          {estDerniere ? 'En attente des résultats finaux…' : `Question ${indice + 1} / ${total} — en attente`}
         </p>
         {!estDerniere && (
           <p className="text-white/50 text-sm">La prochaine question arrive bientôt</p>

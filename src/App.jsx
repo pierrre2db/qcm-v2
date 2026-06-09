@@ -310,7 +310,6 @@ export default function App() {
 
         {screen === S.WAITING && dernierReponse && (
           <ScreenWaiting
-            estCorrect={dernierReponse.estCorrect}
             indice={dernierReponse.indice}
             total={questions.length}
           />
