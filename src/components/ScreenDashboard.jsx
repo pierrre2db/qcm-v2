@@ -92,14 +92,20 @@ export function ScreenDashboard({ roomCode, players, totalQuestions, salon, curr
     )
   }
 
-  function PlayerAvatar({ player, index, aRepondu, estCorrect }) {
+  function PlayerAvatar({ player, index, aRepondu, estCorrect, timerActif }) {
     const name = player.prenom || player.username || '?'
     const style = player.styleAvatar
     const [imgOk, setImgOk] = useState(true)
+    const ringClass = !aRepondu
+      ? 'opacity-35 grayscale'
+      : timerActif
+        ? 'ring-[3px] ring-slate-300 shadow-slate-100'
+        : estCorrect
+          ? 'ring-[3px] ring-emerald-400 shadow-emerald-200'
+          : 'ring-[3px] ring-rose-400 shadow-rose-200'
     return (
       <div className="flex flex-col items-center gap-1">
-        <div className={`relative w-12 h-12 rounded-full overflow-hidden shadow-md transition-all duration-300
-          ${!aRepondu ? 'opacity-35 grayscale' : estCorrect ? 'ring-[3px] ring-emerald-400 shadow-emerald-200' : 'ring-[3px] ring-rose-400 shadow-rose-200'}`}>
+        <div className={`relative w-12 h-12 rounded-full overflow-hidden shadow-md transition-all duration-300 ${ringClass}`}>
           {imgOk ? (
             <img
               src={getAvatarUrl(name, style)}
@@ -112,7 +118,7 @@ export function ScreenDashboard({ roomCode, players, totalQuestions, salon, curr
               {getInitials(name)}
             </div>
           )}
-          {aRepondu && (
+          {aRepondu && !timerActif && (
             <span className={`absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black shadow
               ${estCorrect ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`}>
               {estCorrect ? '✓' : '✗'}
@@ -249,7 +255,7 @@ export function ScreenDashboard({ roomCode, players, totalQuestions, salon, curr
             <div className="p-4 grid grid-cols-2 gap-2">
               {currentQuestion.options.map((opt, idx) => {
                 const c = ANSWER_COLORS[idx] || ANSWER_COLORS[0]
-                const isCorrect = idx === currentCorrectIndex
+                const isCorrect = secondes === 0 && idx === currentCorrectIndex
                 return (
                   <div key={idx} className={`${c.bg} rounded-xl px-3 py-2.5 flex items-center gap-2
                     ${isCorrect ? 'ring-2 ring-white ring-offset-1 shadow-lg' : 'opacity-80'}`}>
@@ -319,6 +325,7 @@ export function ScreenDashboard({ roomCode, players, totalQuestions, salon, curr
                     reponse={reponse}
                     aRepondu={aRepondu}
                     estCorrect={estCorrect}
+                    timerActif={secondes > 0}
                   />
                 )
               })}
