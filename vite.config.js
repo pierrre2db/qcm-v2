@@ -7,6 +7,7 @@ export default defineConfig({
   server: {
     https: false, // set to true with mkcert for local HTTPS if needed
     port: 5173,
+    host: true, // expose on LAN (0.0.0.0) — access via Mac's IP on mobile
   },
   base: '/qcm-v2/',
 })
