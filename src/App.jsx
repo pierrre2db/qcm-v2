@@ -82,9 +82,16 @@ export default function App() {
   useEffect(() => {
     if (!isFirebaseConfigured) return
     signInAnon().then(user => { if (user) setUserId(user.uid) })
+    let autoLoaded = false
     const unsub = abonnerQuizzes(list => {
       setQuizList(list)
       setSelectedQuizId(prev => prev ?? (list.length > 0 ? list[0].id : null))
+      if (!autoLoaded && list.length > 0) {
+        autoLoaded = true
+        chargerQuizParId(list[0].id).then(doc => {
+          if (doc?.rawData) setQuizData(normalizeQuiz(doc.rawData))
+        })
+      }
     })
     return unsub
   }, [])
@@ -169,6 +176,11 @@ export default function App() {
       await inscrireJoueur(code, userId, name, avatarStyle)
       setScreen(S.LOBBY)
       return
+    }
+    // Solo: load selected quiz data (handles auto-selection case where quizData wasn't loaded)
+    if (selectedQuizId && isFirebaseConfigured) {
+      const doc = await chargerQuizParId(selectedQuizId)
+      if (doc?.rawData) setQuizData(normalizeQuiz(doc.rawData))
     }
     setScreen(S.QUIZ)
   }
@@ -258,7 +270,7 @@ export default function App() {
   const isDark = [S.LOBBY, S.QUIZ_LIVE, S.WAITING].includes(screen)
 
   return (
-    <div className={`min-h-screen flex flex-col selection:bg-violet-400 selection:text-white transition-colors duration-300 ${isDark ? 'bg-[#46178F]' : 'bg-slate-50 text-slate-800'}`}>
+    <div className={`min-h-screen flex flex-col selection:bg-violet-400 selection:text-white transition-colors duration-300 ${isDark ? 'bg-[#46178F]' : 'bg-gradient-to-br from-slate-50 via-white to-emerald-50 text-slate-800'}`}>
       <Header
         meta={meta}
         username={username || null}
@@ -310,7 +322,6 @@ export default function App() {
 
         {screen === S.WAITING && dernierReponse && (
           <ScreenWaiting
-            estCorrect={dernierReponse.estCorrect}
             indice={dernierReponse.indice}
             total={questions.length}
           />

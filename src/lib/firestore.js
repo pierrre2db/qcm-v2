@@ -149,6 +149,13 @@ export async function supprimerQuiz(id) {
   await deleteDoc(doc(db, 'quizzes', id))
 }
 
+export async function mettreAJourQuiz(id, rawData, title, questionCount) {
+  if (!isFirebaseConfigured || !db) return
+  await setDoc(doc(db, 'quizzes', id), {
+    title, questionCount, rawData, modifieA: serverTimestamp()
+  }, { merge: true })
+}
+
 // ── LEGACY ─────────────────────────────────────────────────────────────────
 
 export async function registerPlayer(roomId, userId, username) {

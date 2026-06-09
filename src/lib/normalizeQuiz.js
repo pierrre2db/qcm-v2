@@ -23,18 +23,19 @@ export function normalizeQuiz(data) {
   const LETTERS = ['A', 'B', 'C', 'D']
 
   return {
-    meta: data.meta ?? { ...DEFAULT_META, title: data.titre_quiz ?? 'Quiz', subtitle: data.sous_titre ?? '' },
+    meta: data.meta ?? { ...DEFAULT_META, title: data.titre_quiz ?? '', subtitle: data.sous_titre ?? '' },
     groups: data.groups ?? defaultGroups(total),
     questions: data.questions.map(q => {
       const options = LETTERS.map(l => q.options?.[l]).filter(Boolean)
       const correctIndex = LETTERS.indexOf((q.bonne_reponse ?? '').toUpperCase())
       return {
         id: q.id,
-        category: q.difficulte ? `Difficulté ${q.difficulte}/5` : '',
+        category: q.categorie ?? (q.difficulte ? `Difficulté ${q.difficulte}/5` : ''),
         question: q.question ?? '',
         options,
         correctIndex: correctIndex >= 0 ? correctIndex : 0,
-        explanation: q.pourquoi ?? ''
+        explanation: q.pourquoi ?? '',
+        imageUrl: q.image ?? ''
       }
     })
   }
