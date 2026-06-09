@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
+import { uploadQuizImage, ACCEPTED_IMAGE_TYPES, ACCEPTED_IMAGE_LABEL } from '../lib/imageUpload'
 
 const LETTERS = ['A', 'B', 'C', 'D']
 
@@ -50,6 +51,120 @@ function loadFromRaw(rawData) {
   return { title, questions }
 }
 
+// ── IMAGE FIELD ───────────────────────────────────────────────────────────────
+function ImageField({ value, questionKey, onChange }) {
+  const fileRef = useRef(null)
+  const [progress, setProgress] = useState(null)   // null | 0-100
+  const [uploadErr, setUploadErr] = useState('')
+  const [showUrl, setShowUrl] = useState(false)
+  const [drag, setDrag] = useState(false)
+
+  async function handleFile(file) {
+    if (!file) return
+    setUploadErr('')
+    setProgress(0)
+    try {
+      const url = await uploadQuizImage(file, questionKey, pct => setProgress(pct))
+      onChange(url)
+    } catch (e) {
+      setUploadErr(e.message)
+    } finally {
+      setProgress(null)
+    }
+  }
+
+  function handleDrop(e) {
+    e.preventDefault(); setDrag(false)
+    const file = e.dataTransfer.files[0]
+    if (file) handleFile(file)
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+          Image <span className="normal-case font-normal text-slate-400">— optionnelle</span>
+        </label>
+        <button
+          type="button"
+          onClick={() => setShowUrl(v => !v)}
+          className="text-[10px] text-slate-400 hover:text-blue-500 transition font-semibold underline underline-offset-2"
+        >
+          {showUrl ? '← Uploader un fichier' : 'Entrer une URL →'}
+        </button>
+      </div>
+
+      {showUrl ? (
+        /* URL fallback */
+        <div className="flex gap-2">
+          <input
+            type="url"
+            value={value}
+            onChange={e => onChange(e.target.value)}
+            placeholder="https://exemple.com/image.jpg"
+            className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:border-blue-400 transition"
+          />
+          {value && (
+            <button type="button" onClick={() => onChange('')}
+              className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-500 rounded-xl transition text-xs font-bold shrink-0"
+            >✕</button>
+          )}
+        </div>
+      ) : (
+        /* Upload zone */
+        value ? (
+          /* Preview + replace */
+          <div className="relative rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
+            <img src={value} alt="Aperçu" className="max-h-44 w-full object-contain" />
+            <button
+              type="button"
+              onClick={() => { onChange(''); fileRef.current && (fileRef.current.value = '') }}
+              className="absolute top-2 right-2 bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold px-2.5 py-1 rounded-lg shadow transition"
+            >✕ Retirer</button>
+          </div>
+        ) : (
+          <div
+            onDragOver={e => { e.preventDefault(); setDrag(true) }}
+            onDragLeave={() => setDrag(false)}
+            onDrop={handleDrop}
+            onClick={() => progress === null && fileRef.current?.click()}
+            className={`border-2 border-dashed rounded-xl p-5 text-center transition cursor-pointer
+              ${drag ? 'border-blue-400 bg-blue-50' : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'}`}
+          >
+            <input
+              ref={fileRef}
+              type="file"
+              accept={ACCEPTED_IMAGE_TYPES}
+              className="hidden"
+              onChange={e => handleFile(e.target.files[0])}
+            />
+            {progress !== null ? (
+              <div className="space-y-2">
+                <p className="text-xs font-bold text-blue-600">Upload en cours… {progress}%</p>
+                <div className="w-full bg-slate-200 rounded-full h-2">
+                  <div className="bg-blue-500 h-2 rounded-full transition-all" style={{ width: `${progress}%` }} />
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="text-2xl mb-1">🖼️</div>
+                <p className="text-xs font-semibold text-slate-500">Glissez ou cliquez pour uploader</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">{ACCEPTED_IMAGE_LABEL}</p>
+                <p className="text-[10px] text-slate-400">SVG vectoriel passé tel quel · Raster redimensionné → WebP</p>
+              </>
+            )}
+          </div>
+        )
+      )}
+
+      {uploadErr && (
+        <p className="text-xs text-rose-600 font-medium flex items-center gap-1">⚠ {uploadErr}</p>
+      )}
+    </div>
+  )
+}
+
+// ── QUIZ EDITOR ────────────────────────────────────────────────────────────────
 export function QuizEditor({ initialRawData = null, editingId = null, onSave, onCancel }) {
   const loaded = loadFromRaw(initialRawData)
   const [title, setTitle] = useState(loaded.title)
@@ -259,40 +374,12 @@ export function QuizEditor({ initialRawData = null, editingId = null, onSave, on
                     </div>
                   </div>
 
-                  {/* Image URL */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Image (URL) <span className="normal-case font-normal text-slate-400">— optionnelle, affichée au-dessus de la question</span></label>
-                    <div className="flex gap-2">
-                      <input
-                        type="url"
-                        value={q.imageUrl}
-                        onChange={e => updateQuestion(idx, 'imageUrl', e.target.value)}
-                        placeholder="https://exemple.com/image.jpg"
-                        className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:border-blue-400 transition"
-                      />
-                      {q.imageUrl && (
-                        <button
-                          type="button"
-                          onClick={() => updateQuestion(idx, 'imageUrl', '')}
-                          className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-500 rounded-xl transition text-xs font-bold shrink-0"
-                          title="Retirer l'image"
-                        >✕</button>
-                      )}
-                    </div>
-                    {q.imageUrl && (
-                      <div className="mt-2 rounded-xl overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center max-h-40">
-                        <img
-                          src={q.imageUrl}
-                          alt="Aperçu"
-                          className="max-h-40 object-contain"
-                          onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex' }}
-                        />
-                        <div style={{display:'none'}} className="w-full h-20 items-center justify-center text-xs text-slate-400 gap-2">
-                          <span>⚠</span><span>URL invalide ou image non accessible</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  {/* Image upload */}
+                  <ImageField
+                    value={q.imageUrl}
+                    questionKey={`q${q._id}`}
+                    onChange={url => updateQuestion(idx, 'imageUrl', url)}
+                  />
                 </div>
               )}
             </div>
