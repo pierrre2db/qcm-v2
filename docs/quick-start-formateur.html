@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quick Start — Maître du Jeu</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #46178F;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 2rem;
+      max-width: 860px;
+      width: 100%;
+      overflow: hidden;
+      box-shadow: 0 40px 80px rgba(0,0,0,0.4);
+    }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #46178F, #7c3aed);
+      color: white;
+      padding: 2rem 2.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+    .header-icon { font-size: 2.5rem; }
+    .header-badge {
+      font-size: 0.65rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.25);
+      padding: 0.25rem 0.75rem;
+      border-radius: 99px;
+      margin-bottom: 0.4rem;
+      display: inline-block;
+    }
+    .header h1 { font-size: 1.6rem; font-weight: 900; letter-spacing: -0.02em; }
+    .header p  { font-size: 0.85rem; opacity: 0.75; margin-top: 0.2rem; }
+
+    /* URL bar */
+    .url-bar {
+      background: #0f0f1a;
+      padding: 0.75rem 2.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .url-label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #64748b; white-space: nowrap; }
+    .url-value { font-family: monospace; font-size: 0.9rem; color: #10b981; font-weight: 700; }
+
+    /* Steps */
+    .steps { padding: 2rem 2.5rem; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+
+    .step {
+      border: 2px solid #e2e8f0;
+      border-radius: 1.25rem;
+      padding: 1.25rem 1rem;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+    .step-num {
+      position: absolute;
+      top: -0.75rem;
+      left: 1rem;
+      background: #46178F;
+      color: white;
+      font-size: 0.65rem;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      padding: 0.2rem 0.6rem;
+      border-radius: 99px;
+    }
+    .step-icon { font-size: 1.8rem; }
+    .step-title { font-size: 0.85rem; font-weight: 800; color: #1e293b; line-height: 1.2; }
+    .step-desc  { font-size: 0.75rem; color: #64748b; line-height: 1.5; }
+
+    /* Arrow between steps */
+    .step-arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      color: #cbd5e1;
+      margin-top: 2rem;
+    }
+
+    /* Mobile join block */
+    .join-block {
+      margin: 0 2.5rem 2rem;
+      background: #f0fdf4;
+      border: 2px solid #bbf7d0;
+      border-radius: 1.25rem;
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+    .join-icon { font-size: 2rem; flex-shrink: 0; }
+    .join-title { font-size: 0.85rem; font-weight: 800; color: #14532d; margin-bottom: 0.3rem; }
+    .join-desc  { font-size: 0.78rem; color: #15803d; line-height: 1.5; }
+    .join-code  {
+      font-family: monospace;
+      font-size: 0.85rem;
+      font-weight: 900;
+      background: #14532d;
+      color: #86efac;
+      padding: 0.3rem 0.8rem;
+      border-radius: 0.5rem;
+      white-space: nowrap;
+    }
+
+    /* Dashboard legend */
+    .legend {
+      margin: 0 2.5rem 2rem;
+      background: #46178F;
+      border-radius: 1.25rem;
+      padding: 1.25rem 1.5rem;
+      color: white;
+    }
+    .legend-title { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.6; margin-bottom: 0.9rem; }
+    .legend-items { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+    .legend-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.82rem; font-weight: 600; }
+    .dot { width: 1.1rem; height: 1.1rem; border-radius: 50%; flex-shrink: 0; }
+    .dot-grey  { background: #475569; }
+    .dot-green { background: #10b981; }
+    .dot-red   { background: #ef4444; }
+
+    /* Footer */
+    .footer {
+      border-top: 1px solid #f1f5f9;
+      padding: 1rem 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .footer p { font-size: 0.72rem; color: #94a3b8; }
+    .footer-tip {
+      font-size: 0.72rem;
+      color: #7c3aed;
+      font-weight: 700;
+      background: #f5f3ff;
+      padding: 0.4rem 0.9rem;
+      border-radius: 99px;
+      white-space: nowrap;
+    }
+
+    @media print {
+      body { background: white; padding: 0; }
+      .card { box-shadow: none; border-radius: 0; max-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-icon">🛡️</div>
+    <div>
+      <div class="header-badge">Quick Start</div>
+      <h1>Guide du Maître du Jeu</h1>
+      <p>Défi Hygiène &amp; Sécurité Alimentaire · Mode Live</p>
+    </div>
+  </div>
+
+  <!-- URL -->
+  <div class="url-bar">
+    <span class="url-label">Accès</span>
+    <span class="url-value">https://pierrre2db.github.io/qcm-v2/</span>
+  </div>
+
+  <!-- 4 Steps -->
+  <div class="steps">
+
+    <div class="step">
+      <span class="step-num">ÉTAPE 1</span>
+      <div class="step-icon">🌐</div>
+      <div class="step-title">Ouvrez l'appli</div>
+      <div class="step-desc">Allez sur l'URL ci-dessus depuis votre ordinateur. Connectez-vous au projecteur.</div>
+    </div>
+
+    <div class="step">
+      <span class="step-num">ÉTAPE 2</span>
+      <div class="step-icon">📋</div>
+      <div class="step-title">Créez une session</div>
+      <div class="step-desc">Descendez jusqu'à <strong>Espace Enseignant</strong> → cliquez <strong>"Créer une session live"</strong>.</div>
+    </div>
+
+    <div class="step">
+      <span class="step-num">ÉTAPE 3</span>
+      <div class="step-icon">📱</div>
+      <div class="step-title">Joueurs se connectent</div>
+      <div class="step-desc">Ils scannent le QR code ou tapent l'URL + le code à 6 lettres affiché en grand.</div>
+    </div>
+
+    <div class="step" style="border-color: #10b981; background: #f0fdf4;">
+      <span class="step-num" style="background: #059669;">ÉTAPE 4</span>
+      <div class="step-icon">🚀</div>
+      <div class="step-title">Lancez la partie !</div>
+      <div class="step-desc">Quand tout le monde est prêt → cliquez <strong style="color:#059669;">"Lancer la partie"</strong>.</div>
+    </div>
+
+  </div>
+
+  <!-- Mobile join -->
+  <div class="join-block">
+    <div class="join-icon">📲</div>
+    <div>
+      <div class="join-title">Comment les joueurs rejoignent sur mobile</div>
+      <div class="join-desc">
+        <strong>Option A — QR code :</strong> Scanner le QR code affiché sur votre écran → arrive directement sur la page de connexion.<br>
+        <strong>Option B — URL :</strong> Taper <code style="background:#dcfce7;padding:0.1rem 0.3rem;border-radius:0.25rem;">pierrre2db.github.io/qcm-v2</code> → entrer le code de salle.
+      </div>
+    </div>
+    <div class="join-code">?room=XXXXXX</div>
+  </div>
+
+  <!-- Dashboard legend -->
+  <div class="legend">
+    <div class="legend-title">Pendant la partie — ce que vous voyez sur votre tableau de bord</div>
+    <div class="legend-items">
+      <div class="legend-item"><div class="dot dot-grey"></div> Joueur n'a pas encore répondu</div>
+      <div class="legend-item"><div class="dot dot-green"></div> Réponse correcte ✓</div>
+      <div class="legend-item"><div class="dot dot-red"></div> Réponse incorrecte ✗</div>
+      <div class="legend-item" style="opacity:0.7; font-size:0.75rem;">Bouton <strong>"Question suivante"</strong> → avancer sans attendre le timer</div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <p>© 2026 — Conforme aux exigences de formation AFSCA</p>
+    <div class="footer-tip">💡 Projetez votre écran pour que le groupe vive la session ensemble</div>
+  </div>
+
+</div>
+
+</body>
+</html>

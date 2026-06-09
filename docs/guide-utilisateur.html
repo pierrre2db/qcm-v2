@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Guide Utilisateur — QCM V2</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+    :root {
+      --purple:   #46178F;
+      --purple-light: #7c3aed;
+      --green:    #10b981;
+      --red:      #ef4444;
+      --yellow:   #f59e0b;
+      --blue:     #3b82f6;
+      --dark:     #0f0f1a;
+      --card:     #1e1e2e;
+      --border:   #2d2d44;
+      --text:     #e2e8f0;
+      --muted:    #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--dark);
+      color: var(--text);
+      line-height: 1.7;
+    }
+
+    /* ── COVER PAGE ─────────────────────────────────── */
+    .cover {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      background: linear-gradient(135deg, #0f0f1a 0%, #1a0a2e 50%, #0f0f1a 100%);
+      padding: 4rem 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .cover::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 30% 40%, rgba(124,58,237,0.15) 0%, transparent 60%),
+                  radial-gradient(ellipse at 70% 60%, rgba(16,185,129,0.1) 0%, transparent 60%);
+    }
+    .cover-logo {
+      font-size: 4rem;
+      margin-bottom: 1.5rem;
+      position: relative;
+    }
+    .cover-badge {
+      display: inline-block;
+      background: rgba(124,58,237,0.2);
+      border: 1px solid rgba(124,58,237,0.4);
+      color: #a78bfa;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      padding: 0.4rem 1.2rem;
+      border-radius: 99px;
+      margin-bottom: 1.5rem;
+      position: relative;
+    }
+    .cover h1 {
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #fff 0%, #a78bfa 50%, #10b981 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      position: relative;
+      margin-bottom: 0.75rem;
+    }
+    .cover-sub {
+      font-size: 1.1rem;
+      color: var(--muted);
+      position: relative;
+      max-width: 500px;
+    }
+    .cover-pills {
+      display: flex;
+      gap: 1rem;
+      margin-top: 3rem;
+      position: relative;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .pill {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      padding: 0.6rem 1.2rem;
+      border-radius: 99px;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+
+    /* ── LAYOUT ──────────────────────────────────────── */
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 3rem 2rem 6rem;
+    }
+
+    /* ── TOC ─────────────────────────────────────────── */
+    .toc {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-left: 4px solid var(--purple-light);
+      border-radius: 1rem;
+      padding: 1.5rem 2rem;
+      margin-bottom: 3rem;
+    }
+    .toc h2 {
+      font-size: 0.7rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      margin-bottom: 1rem;
+    }
+    .toc ol {
+      list-style: none;
+      counter-reset: toc;
+    }
+    .toc li {
+      counter-increment: toc;
+      display: flex;
+      align-items: baseline;
+      gap: 0.75rem;
+      padding: 0.3rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .toc li:last-child { border: none; }
+    .toc li::before {
+      content: counter(toc, decimal-leading-zero);
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--purple-light);
+      min-width: 1.5rem;
+    }
+    .toc a {
+      color: var(--text);
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    .toc a:hover { color: #a78bfa; }
+
+    /* ── SECTIONS ────────────────────────────────────── */
+    section {
+      margin-bottom: 4rem;
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .section-num {
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--purple), var(--purple-light));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      font-weight: 800;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .section-title {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #f1f5f9;
+    }
+
+    /* ── CALLOUT ─────────────────────────────────────── */
+    .callout {
+      display: flex;
+      gap: 0.75rem;
+      padding: 1rem 1.25rem;
+      border-radius: 0.75rem;
+      margin: 1.25rem 0;
+      font-size: 0.9rem;
+    }
+    .callout-tip   { background: rgba(16,185,129,0.1);  border-left: 3px solid var(--green);  }
+    .callout-warn  { background: rgba(245,158,11,0.1);  border-left: 3px solid var(--yellow); }
+    .callout-info  { background: rgba(124,58,237,0.1);  border-left: 3px solid var(--purple-light); }
+    .callout-icon  { font-size: 1.1rem; flex-shrink: 0; line-height: 1.6; }
+
+    /* ── COMPARE TABLE ───────────────────────────────── */
+    .compare {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5rem 0;
+      font-size: 0.9rem;
+    }
+    .compare th {
+      padding: 0.75rem 1rem;
+      font-weight: 700;
+      text-align: left;
+    }
+    .compare th:nth-child(2) { background: rgba(16,185,129,0.15); color: var(--green); border-radius: 0.5rem 0.5rem 0 0; }
+    .compare th:nth-child(3) { background: rgba(124,58,237,0.15); color: #a78bfa; border-radius: 0.5rem 0.5rem 0 0; }
+    .compare td {
+      padding: 0.7rem 1rem;
+      border-top: 1px solid var(--border);
+      vertical-align: top;
+    }
+    .compare td:first-child { color: var(--muted); font-size: 0.82rem; font-weight: 500; }
+    .compare td:nth-child(2) { background: rgba(16,185,129,0.05); }
+    .compare td:nth-child(3) { background: rgba(124,58,237,0.05); }
+
+    /* ── STEPS ───────────────────────────────────────── */
+    .steps { list-style: none; counter-reset: step; margin: 1.25rem 0; }
+    .steps li {
+      counter-increment: step;
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 0.75rem;
+      align-items: flex-start;
+    }
+    .steps li::before {
+      content: counter(step);
+      min-width: 1.8rem;
+      height: 1.8rem;
+      border-radius: 50%;
+      background: rgba(124,58,237,0.2);
+      border: 1px solid rgba(124,58,237,0.4);
+      color: #a78bfa;
+      font-size: 0.75rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 0.15rem;
+    }
+
+    /* ── LEVEL TABLE ─────────────────────────────────── */
+    .level-table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+    .level-table th { background: rgba(255,255,255,0.05); padding: 0.6rem 1rem; text-align: left; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+    .level-table td { padding: 0.7rem 1rem; border-top: 1px solid var(--border); font-size: 0.9rem; }
+    .level-table tr:nth-child(1) td:first-child { color: #fbbf24; }
+    .level-table tr:nth-child(2) td:first-child { color: var(--green); }
+    .level-table tr:nth-child(3) td:first-child { color: var(--yellow); }
+    .level-table tr:nth-child(4) td:first-child { color: var(--red); }
+
+    /* ── ANSWER BUTTONS DEMO ─────────────────────────── */
+    .answer-demo {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin: 1.25rem 0;
+    }
+    .ans-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.85rem 1rem;
+      border-radius: 0.75rem;
+      font-weight: 700;
+      font-size: 0.85rem;
+    }
+    .ans-btn .shape { font-size: 1.2rem; }
+    .ans-red    { background: rgba(226,27,60,0.2);  border: 1px solid rgba(226,27,60,0.4);  color: #fca5a5; }
+    .ans-blue   { background: rgba(19,104,206,0.2); border: 1px solid rgba(19,104,206,0.4); color: #93c5fd; }
+    .ans-yellow { background: rgba(216,158,0,0.2);  border: 1px solid rgba(216,158,0,0.4);  color: #fcd34d; }
+    .ans-green  { background: rgba(38,137,12,0.2);  border: 1px solid rgba(38,137,12,0.4);  color: #86efac; }
+
+    /* ── DASHBOARD GRID ──────────────────────────────── */
+    .avatar-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin: 1rem 0;
+      padding: 1rem;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+    }
+    .av {
+      width: 3rem;
+      height: 3rem;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+    .av-grey   { background: #334155; border: 2px solid #475569; color: #94a3b8; }
+    .av-green  { background: rgba(16,185,129,0.2); border: 2px solid var(--green); }
+    .av-red    { background: rgba(239,68,68,0.2);  border: 2px solid var(--red); }
+
+    /* ── CONTROLS TABLE ──────────────────────────────── */
+    .ctrl-table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+    .ctrl-table td { padding: 0.7rem 1rem; border-top: 1px solid var(--border); font-size: 0.9rem; }
+    .ctrl-table td:first-child { font-weight: 700; color: #a78bfa; white-space: nowrap; }
+
+    /* ── FLOW DIAGRAM ────────────────────────────────── */
+    .flow {
+      background: #0a0a14;
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+      line-height: 1.9;
+      overflow-x: auto;
+      margin: 1.5rem 0;
+    }
+    .flow-phase {
+      color: #a78bfa;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      margin-top: 0.5rem;
+    }
+    .flow-line { color: #475569; }
+    .flow-teacher { color: #34d399; }
+    .flow-player  { color: #93c5fd; }
+    .flow-both    { color: #fcd34d; }
+    .flow-note    { color: #64748b; font-style: italic; }
+    .flow-arrow   { color: #6366f1; }
+
+    /* ── TIPS ────────────────────────────────────────── */
+    .tips { list-style: none; margin: 1rem 0; }
+    .tips li {
+      display: flex;
+      gap: 0.75rem;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      font-size: 0.9rem;
+    }
+    .tips li:last-child { border: none; }
+    .tips li .tip-icon { font-size: 1.1rem; flex-shrink: 0; }
+
+    /* ── SUBHEADS ────────────────────────────────────── */
+    h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #cbd5e1;
+      margin: 1.75rem 0 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    h3::before {
+      content: '';
+      display: inline-block;
+      width: 3px;
+      height: 1em;
+      background: var(--purple-light);
+      border-radius: 99px;
+      flex-shrink: 0;
+    }
+    p { margin-bottom: 0.75rem; font-size: 0.95rem; color: #cbd5e1; }
+
+    /* ── BULLETS ─────────────────────────────────────── */
+    ul.bullets { list-style: none; margin: 0.75rem 0 1rem; }
+    ul.bullets li {
+      display: flex;
+      gap: 0.6rem;
+      padding: 0.3rem 0;
+      font-size: 0.9rem;
+      color: #cbd5e1;
+    }
+    ul.bullets li::before { content: '·'; color: var(--purple-light); font-weight: 900; }
+
+    /* ── FOOTER ──────────────────────────────────────── */
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.75rem;
+      padding: 2rem;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ── PRINT ───────────────────────────────────────── */
+    @media print {
+      body { background: #fff; color: #111; }
+      .cover { background: #46178F; min-height: auto; padding: 3rem 2rem; }
+      .cover h1 { -webkit-text-fill-color: #fff; }
+      .cover-sub, .cover-badge { color: rgba(255,255,255,0.8); }
+      .card, .toc, .flow, .avatar-grid { border-color: #ddd; background: #f8f8f8; }
+      section { page-break-inside: avoid; }
+      .flow { color: #333; background: #f0f0f0; }
+      a { color: inherit; text-decoration: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════ COVER -->
+<div class="cover">
+  <div class="cover-logo">🛡️</div>
+  <div class="cover-badge">Guide Utilisateur</div>
+  <h1>Défi Hygiène &amp; Sécurité<br>Alimentaire</h1>
+  <p class="cover-sub">Comment utiliser l'application — pour les apprenants et les formateurs</p>
+  <div class="cover-pills">
+    <div class="pill">📱 Mode Solo</div>
+    <div class="pill">🎮 Mode Live</div>
+    <div class="pill">👨‍🏫 Tableau de bord formateur</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════ CONTENT -->
+<div class="container">
+
+  <!-- TABLE DES MATIÈRES -->
+  <nav class="toc">
+    <h2>Sommaire</h2>
+    <ol>
+      <li><a href="#s1">Vue d'ensemble — Deux façons d'utiliser l'application</a></li>
+      <li><a href="#s2">Mode Entraînement Solo — Pratiquer à son rythme</a></li>
+      <li><a href="#s3">Mode Live — Le vécu du joueur</a></li>
+      <li><a href="#s4">Mode Live — Le tableau de bord du Maître du Jeu</a></li>
+      <li><a href="#s5">Déroulement complet d'une session live</a></li>
+    </ol>
+  </nav>
+
+  <!-- ── SECTION 1 ─────────────────────────────────── -->
+  <section id="s1">
+    <div class="section-header">
+      <div class="section-num">01</div>
+      <h2 class="section-title">Vue d'ensemble — Deux façons d'utiliser l'application</h2>
+    </div>
+
+    <p>Que vous soyez seul chez vous ou en salle de formation avec un groupe, l'application s'adapte à votre situation. Les mêmes questions, deux expériences différentes.</p>
+
+    <table class="compare">
+      <thead>
+        <tr>
+          <th></th>
+          <th>📱 Mode Solo</th>
+          <th>🎮 Mode Live</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Qui l'utilise ?</td><td>Un apprenant seul</td><td>Un groupe + un animateur</td></tr>
+        <tr><td>Quand ?</td><td>À tout moment, à son rythme</td><td>Pendant une session de formation</td></tr>
+        <tr><td>Besoin d'un formateur ?</td><td>Non</td><td>Oui, il lance et pilote</td></tr>
+        <tr><td>Timer ?</td><td>Chrono qui monte (info seule)</td><td>30 secondes par question</td></tr>
+        <tr><td>Correction détaillée ?</td><td>Oui, à la fin</td><td>Visible après la session</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout callout-tip">
+      <div class="callout-icon">💡</div>
+      <div><strong>En résumé :</strong> Le mode Solo, c'est réviser son cours tranquillement. Le mode Live, c'est l'interro en classe — tout le monde répond en même temps, l'animateur voit tout.</div>
+    </div>
+  </section>
+
+  <!-- ── SECTION 2 ─────────────────────────────────── -->
+  <section id="s2">
+    <div class="section-header">
+      <div class="section-num">02</div>
+      <h2 class="section-title">Mode Entraînement Solo — Pratiquer à son rythme</h2>
+    </div>
+
+    <div class="callout callout-info">
+      <div class="callout-icon">🎯</div>
+      <div>Idéal pour tester ses connaissances avant ou après une formation, sans pression et sans formateur.</div>
+    </div>
+
+    <h3>Comment démarrer ?</h3>
+    <ol class="steps">
+      <li>Ouvrir l'application sur votre téléphone ou ordinateur</li>
+      <li>Entrer votre prénom</li>
+      <li>Choisir votre avatar — Robot 🤖 · Emoji 😄 · Pixel 🎮</li>
+      <li>Cliquer sur <strong>"S'entraîner seul"</strong> — aucun code requis</li>
+      <li>Le quiz démarre immédiatement</li>
+    </ol>
+
+    <h3>Pendant le quiz</h3>
+    <ul class="bullets">
+      <li>Les questions s'affichent une par une, avec <strong>3 choix de réponse</strong> (A, B, C)</li>
+      <li><strong>Pas de chronomètre</strong> qui décompte — vous répondez à votre rythme</li>
+      <li>Un compteur de temps tourne en fond (pour information, sans pression)</li>
+      <li>Après chaque réponse, la question suivante s'affiche directement</li>
+    </ul>
+
+    <div class="callout callout-warn">
+      <div class="callout-icon">⚠️</div>
+      <div>Pas de correction entre les questions — la correction complète arrive <strong>à la fin</strong> du quiz.</div>
+    </div>
+
+    <h3>À la fin du quiz — Votre résultat</h3>
+    <p>Vous obtenez votre <strong>note sur 10</strong> et votre <strong>groupe de niveau</strong> :</p>
+
+    <table class="level-table">
+      <thead><tr><th>Groupe</th><th>Signification</th></tr></thead>
+      <tbody>
+        <tr><td>🏆 Expert</td><td>Maîtrise complète — félicitations !</td></tr>
+        <tr><td>✅ Bien</td><td>Bonne base, quelques points à revoir</td></tr>
+        <tr><td>⚠️ Améliorable</td><td>Des lacunes sur des points importants</td></tr>
+        <tr><td>🔴 À revoir</td><td>Révision approfondie recommandée</td></tr>
+      </tbody>
+    </table>
+
+    <p>Vous voyez aussi votre <strong>temps total</strong>, votre <strong>pourcentage de réussite</strong> et un commentaire personnalisé du formateur selon votre score.</p>
+
+    <h3>La correction détaillée</h3>
+    <p>Cliquez sur <strong>"Revoir les réponses"</strong> pour accéder à la correction complète :</p>
+    <ul class="bullets">
+      <li>Chaque question avec votre réponse</li>
+      <li>La bonne réponse si vous vous êtes trompé</li>
+      <li>Une <strong>explication pédagogique</strong> pour comprendre pourquoi</li>
+    </ul>
+    <p>Cliquez <strong>"Recommencer"</strong> pour refaire le quiz et améliorer votre score.</p>
+  </section>
+
+  <!-- ── SECTION 3 ─────────────────────────────────── -->
+  <section id="s3">
+    <div class="section-header">
+      <div class="section-num">03</div>
+      <h2 class="section-title">Mode Live — Le vécu du joueur</h2>
+    </div>
+
+    <div class="callout callout-info">
+      <div class="callout-icon">🎮</div>
+      <div>Tout le monde joue en même temps. L'animateur contrôle le rythme. L'ambiance est celle d'un jeu télévisé.</div>
+    </div>
+
+    <h3>Comment rejoindre la session ?</h3>
+    <ol class="steps">
+      <li>Ouvrir l'application sur son téléphone ou ordinateur</li>
+      <li>Entrer son prénom</li>
+      <li>Choisir son avatar — Robot 🤖 · Emoji 😄 · Pixel 🎮</li>
+      <li>Entrer le <strong>code à 6 caractères</strong> donné par le formateur <span style="background:#1e1e2e;border:1px solid #334155;padding:0.1rem 0.5rem;border-radius:0.3rem;font-family:monospace;font-size:0.85rem;">27Z6LC</span></li>
+      <li>Cliquer <strong>"Rejoindre la session"</strong></li>
+    </ol>
+
+    <div class="callout callout-tip">
+      <div class="callout-icon">💡</div>
+      <div>Pas besoin de créer un compte. Juste un prénom et le code de salle.</div>
+    </div>
+
+    <h3>La salle d'attente</h3>
+    <p>Après avoir rejoint, vous arrivez dans la <strong>salle d'attente</strong>. Vous voyez votre avatar, les autres participants qui arrivent, et un message "En attente du démarrage…"</p>
+    <p>La session démarre quand le formateur clique sur <strong>"Lancer la partie"</strong>.</p>
+
+    <h3>Les 4 boutons de réponse</h3>
+    <div class="answer-demo">
+      <div class="ans-btn ans-red">  <span class="shape">▲</span> Réponse A</div>
+      <div class="ans-btn ans-blue"> <span class="shape">◆</span> Réponse B</div>
+      <div class="ans-btn ans-yellow"><span class="shape">●</span> Réponse C</div>
+      <div class="ans-btn ans-green"><span class="shape">■</span> Réponse D</div>
+    </div>
+
+    <h3>Pendant le quiz</h3>
+    <ul class="bullets">
+      <li>Les questions apparaissent <strong>en même temps pour tout le monde</strong></li>
+      <li>Un <strong>timer de 30 secondes</strong> décompte — il faut répondre avant la fin !</li>
+      <li>Dès que vous cliquez une réponse, vous passez en mode <strong>"En attente"</strong></li>
+      <li>Vous ne pouvez pas changer votre réponse</li>
+    </ul>
+
+    <h3>Entre chaque question</h3>
+    <p>Un écran d'attente s'affiche pendant que les autres finissent de répondre. La question suivante apparaît dès que le formateur avance.</p>
+
+    <h3>À la fin</h3>
+    <p>Votre score final s'affiche. Le formateur peut afficher le classement général et le podium des meilleurs scores.</p>
+  </section>
+
+  <!-- ── SECTION 4 ─────────────────────────────────── -->
+  <section id="s4">
+    <div class="section-header">
+      <div class="section-num">04</div>
+      <h2 class="section-title">Mode Live — Le tableau de bord du Maître du Jeu</h2>
+    </div>
+
+    <div class="callout callout-info">
+      <div class="callout-icon">👨‍🏫</div>
+      <div>Le formateur voit tout en temps réel. Il contrôle le rythme de la session depuis son écran — idéalement projeté pour le groupe.</div>
+    </div>
+
+    <h3>Créer une session</h3>
+    <ol class="steps">
+      <li>Ouvrir l'application</li>
+      <li>Aller dans <strong>"Espace Enseignant"</strong></li>
+      <li>Sélectionner un quiz</li>
+      <li>Cliquer <strong>"Créer une session"</strong></li>
+      <li>Un <strong>code à 6 caractères</strong> est généré automatiquement → le donner aux participants</li>
+    </ol>
+
+    <h3>L'écran de lobby — avant le démarrage</h3>
+    <ul class="bullets">
+      <li>Le <strong>code de salle</strong> affiché en grand (à projeter ou dicter)</li>
+      <li>Les <strong>avatars des joueurs</strong> qui apparaissent en temps réel</li>
+      <li>Quand tout le monde est là → cliquer <strong>"Lancer la partie"</strong></li>
+    </ul>
+
+    <h3>Pendant le quiz — la grille des joueurs en temps réel</h3>
+    <p>Pour chaque question, les avatars des joueurs changent de couleur instantanément :</p>
+
+    <div class="avatar-grid">
+      <div class="av av-grey">🤖</div>
+      <div class="av av-green">😄</div>
+      <div class="av av-red">🎮</div>
+      <div class="av av-green">🤖</div>
+      <div class="av av-grey">😄</div>
+      <div class="av av-green">🎮</div>
+      <div class="av av-red">🤖</div>
+      <div class="av av-green">😄</div>
+      <div class="av av-grey">🎮</div>
+      <div class="av av-green">🤖</div>
+    </div>
+
+    <ul class="bullets">
+      <li>🔘 <strong>Gris</strong> — n'a pas encore répondu</li>
+      <li>🟢 <strong>Vert ✓</strong> — a répondu correctement</li>
+      <li>🔴 <strong>Rouge ✗</strong> — a répondu incorrectement</li>
+    </ul>
+
+    <p>Le formateur voit aussi : la question en cours, les 4 réponses possibles (la bonne mise en évidence), le timer circulaire, et les statistiques en direct (combien ont répondu).</p>
+
+    <h3>Contrôles disponibles</h3>
+    <table class="ctrl-table">
+      <tr><td>Question suivante</td><td>Passer à la question suivante sans attendre la fin du timer</td></tr>
+      <tr><td>Arrêter la session</td><td>Terminer la partie avant la fin</td></tr>
+    </table>
+
+    <h3>À la fin de la session</h3>
+    <p>Un écran récapitulatif s'affiche avec les scores. Le formateur peut choisir d'afficher le <strong>podium final</strong> aux joueurs.</p>
+  </section>
+
+  <!-- ── SECTION 5 ─────────────────────────────────── -->
+  <section id="s5">
+    <div class="section-header">
+      <div class="section-num">05</div>
+      <h2 class="section-title">Déroulement complet d'une session live</h2>
+    </div>
+
+    <p>Voici comment se déroule une session de A à Z :</p>
+
+    <div class="flow">
+      <div class="flow-phase">AVANT LA SESSION</div>
+      <div class="flow-line">─────────────────────────────────────────────────────</div>
+      <div>  <span class="flow-teacher">Formateur </span> <span class="flow-arrow">→</span>  Crée la session <span class="flow-arrow">→</span> obtient le code <span style="color:#fcd34d">«&nbsp;27Z6LC&nbsp;»</span></div>
+      <div>  <span class="flow-teacher">Formateur </span> <span class="flow-arrow">→</span>  Projette ou dicte le code aux participants</div>
+      <br>
+      <div class="flow-phase">CONNEXION DES JOUEURS</div>
+      <div class="flow-line">─────────────────────────────────────────────────────</div>
+      <div>  <span class="flow-player">Joueurs   </span> <span class="flow-arrow">→</span>  Ouvrent l'app sur leur téléphone</div>
+      <div>  <span class="flow-player">Joueurs   </span> <span class="flow-arrow">→</span>  Entrent prénom + avatar + code</div>
+      <div>  <span class="flow-teacher">Formateur </span> <span class="flow-arrow">→</span>  Voit les avatars apparaître en temps réel</div>
+      <div class="flow-note">                ✓ Attendre que tout le monde soit connecté</div>
+      <br>
+      <div class="flow-phase">DÉMARRAGE</div>
+      <div class="flow-line">─────────────────────────────────────────────────────</div>
+      <div>  <span class="flow-teacher">Formateur </span> <span class="flow-arrow">→</span>  Clique <strong style="color:#a78bfa">"Lancer la partie"</strong></div>
+      <div>  <span class="flow-player">Joueurs   </span> <span class="flow-arrow">→</span>  La 1ère question s'affiche automatiquement</div>
+      <br>
+      <div class="flow-phase">POUR CHAQUE QUESTION (×10)</div>
+      <div class="flow-line">─────────────────────────────────────────────────────</div>
+      <div>  <span class="flow-player">Joueurs   </span> <span class="flow-arrow">→</span>  Lisent la question · Timer 30s démarre</div>
+      <div>  <span class="flow-player">Joueurs   </span> <span class="flow-arrow">→</span>  Cliquent une réponse <span class="flow-arrow">→</span> passent en attente</div>
+      <div>  <span class="flow-teacher">Formateur </span> <span class="flow-arrow">→</span>  Voit les avatars passer au <span style="color:var(--green)">vert ✓</span> / <span style="color:var(--red)">rouge ✗</span></div>
+      <div>  <span class="flow-teacher">Formateur </span> <span class="flow-arrow">→</span>  Clique <strong style="color:#a78bfa">"Question suivante"</strong> quand prêt</div>
+      <br>
+      <div class="flow-phase">FIN DE SESSION</div>
+      <div class="flow-line">─────────────────────────────────────────────────────</div>
+      <div>  <span class="flow-teacher">Formateur </span> <span class="flow-arrow">→</span>  Clique <strong style="color:#a78bfa">"Terminer"</strong></div>
+      <div>  <span class="flow-player">Joueurs   </span> <span class="flow-arrow">→</span>  Voient leur score final</div>
+      <div>  <span class="flow-teacher">Formateur </span> <span class="flow-arrow">→</span>  Voit le classement complet + podium</div>
+    </div>
+
+    <h3>Conseils pour une session réussie</h3>
+    <ul class="tips">
+      <li><span class="tip-icon">📶</span> Vérifier que tous les participants ont une connexion internet avant de commencer</li>
+      <li><span class="tip-icon">📺</span> Projeter votre écran (tableau de bord) pour que le groupe vive la session ensemble</li>
+      <li><span class="tip-icon">⏱️</span> Prévoir 2-3 minutes de connexion avant de lancer la partie</li>
+      <li><span class="tip-icon">🔁</span> Les joueurs peuvent rejouer en solo après la session pour consolider leurs acquis</li>
+      <li><span class="tip-icon">🎯</span> Utiliser le mode Solo comme devoir de préparation avant la session live</li>
+    </ul>
+  </section>
+
+</div>
+
+<footer>
+  © 2026 — Conforme aux exigences de formation de l'AFSCA · QCM V2
+</footer>
+
+</body>
+</html>

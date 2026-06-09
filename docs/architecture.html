@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QCM V2 — Architecture Diagrams</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f0f1a;
+      color: #e2e8f0;
+      padding: 2rem;
+      min-height: 100vh;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+    header h1 {
+      font-size: 2.2rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, #10b981, #6366f1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.03em;
+    }
+    header p {
+      color: #94a3b8;
+      margin-top: 0.5rem;
+      font-size: 0.9rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+    .card-full { grid-column: 1 / -1; }
+
+    .card {
+      background: #1e1e2e;
+      border: 1px solid #2d2d44;
+      border-radius: 1.5rem;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    .card-header {
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      border-bottom: 1px solid #2d2d44;
+    }
+    .badge {
+      font-size: 0.65rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 0.2rem 0.6rem;
+      border-radius: 99px;
+    }
+    .badge-sequence  { background: #312e81; color: #a5b4fc; }
+    .badge-flow      { background: #14532d; color: #86efac; }
+    .badge-arch      { background: #451a03; color: #fdba74; }
+    .badge-er        { background: #4c1d95; color: #d8b4fe; }
+    .badge-test      { background: #1e3a5f; color: #93c5fd; }
+
+    .card-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+    .card-body {
+      padding: 1.5rem;
+      overflow-x: auto;
+    }
+    .mermaid {
+      display: flex;
+      justify-content: center;
+    }
+
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; }
+      .card-full { grid-column: 1; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>QCM V2 — Architecture Diagrams</h1>
+  <p>Vue complète du système · React 19 + Firebase Firestore + DiceBear</p>
+</header>
+
+<div class="grid">
+
+  <!-- 1. Sequence — Session Live -->
+  <div class="card card-full">
+    <div class="card-header">
+      <span class="badge badge-sequence">Séquence</span>
+      <span class="card-title">Flux d'une session live complète</span>
+    </div>
+    <div class="card-body">
+      <div class="mermaid">
+sequenceDiagram
+  actor Prof as 👨‍🏫 Professeur
+  participant FB as 🔥 Firestore
+  actor E1 as 📱 Élève 1
+  actor E2 as 📱 Élève 2
+  participant DC as 🤖 DiceBear
+
+  Prof->>FB: creerSalon(quizId)
+  FB-->>Prof: roomCode = "27Z6LC"
+
+  E1->>DC: getAvatarUrl("Zara-9", "fun-emoji")
+  DC-->>E1: SVG avatar 😄
+  E1->>FB: inscrireJoueur(prenom, styleAvatar)
+  FB-->>Prof: 🔔 onSnapshot — Zara-9 rejoint
+
+  E2->>DC: getAvatarUrl("Kael Voss", "pixel-art")
+  DC-->>E2: SVG avatar 🎮
+  E2->>FB: inscrireJoueur(prenom, styleAvatar)
+  FB-->>Prof: 🔔 onSnapshot — Kael Voss rejoint
+
+  Prof->>FB: lancerPartie(questionCourante=0)
+  FB-->>E1: 🔔 statut = en-cours → ScreenQuizLive
+  FB-->>E2: 🔔 statut = en-cours → ScreenQuizLive
+
+  Note over E1,E2: Timer 30s · 4 boutons colorés ▲◆●■
+
+  E1->>FB: soumettreReponse(q=0, choix=2, score=1)
+  FB-->>Prof: 🔔 avatar Zara-9 → vert ✓
+
+  E2->>FB: soumettreReponse(q=0, choix=0, score=0)
+  FB-->>Prof: 🔔 avatar Kael Voss → rouge ✗
+
+  Prof->>FB: questionSuivante(questionCourante=1)
+  FB-->>E1: 🔔 nouvelle question
+  FB-->>E2: 🔔 nouvelle question
+
+  Note over Prof,E2: ... × N questions ...
+
+  Prof->>FB: terminerSalon()
+  FB-->>E1: 🔔 statut = termine → ScreenResult
+  FB-->>E2: 🔔 statut = termine → ScreenResult
+  FB-->>Prof: 🔔 → ScreenPodium
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Flowchart — State machine élève -->
+  <div class="card">
+    <div class="card-header">
+      <span class="badge badge-flow">Flowchart</span>
+      <span class="card-title">Machine d'états — Vue Élève</span>
+    </div>
+    <div class="card-body">
+      <div class="mermaid">
+flowchart TD
+  A([🌐 Arrivée]) --> B[ScreenWelcome\nPseudo + Avatar + Mode]
+  B -->|Solo| C[ScreenQuiz\nMode local]
+  B -->|Live + code| D[inscrireJoueur\nFirestore]
+  D --> E[ScreenLobby\nAttente démarrage]
+  E -->|statut = en-cours| F{aDejaRepondu?}
+  F -->|Non| G[ScreenQuizLive\nTimer + 4 boutons]
+  F -->|Oui| H[ScreenWaiting\n⏳ attente]
+  G -->|Réponse cliquée| H
+  H -->|nouvelle question| F
+  H -->|statut = termine| I[ScreenResult\nScore final]
+  C --> I
+  I --> J[ScreenReview\nCorrigé détaillé]
+  J --> B
+  E -->|abandonne = true| K[🚨 Toast abandon\nRetour accueil]
+  K --> B
+
+  style A fill:#10b981,color:#fff,stroke:none
+  style G fill:#46178f,color:#fff,stroke:none
+  style H fill:#1e293b,color:#94a3b8,stroke:#334155
+  style I fill:#f59e0b,color:#000,stroke:none
+  style K fill:#ef4444,color:#fff,stroke:none
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Flowchart — State machine prof -->
+  <div class="card">
+    <div class="card-header">
+      <span class="badge badge-flow">Flowchart</span>
+      <span class="card-title">Machine d'états — Vue Professeur</span>
+    </div>
+    <div class="card-body">
+      <div class="mermaid">
+flowchart TD
+  A([🌐 Accueil]) --> B[ScreenWelcome\nEspace Enseignant]
+  B -->|Créer session| C[creerSalon\nFirestore]
+  C --> D[ScreenDashboard\nPhase LOBBY]
+  D -->|Joueurs connectés| D
+  D -->|Lancer la partie| E[lancerPartie\nFirestore]
+  E --> F[ScreenDashboard\nPhase EN COURS]
+  F -->|Avatar vert/rouge\nen temps réel| F
+  F -->|Question suivante\nou timer expire| G{Dernière Q?}
+  G -->|Non| F
+  G -->|Oui| H[terminerSalon\nFirestore]
+  H --> I[ScreenDashboard\nPhase TERMINÉ]
+  I --> J[ScreenPodium\nTop 3]
+  J --> A
+  F -->|Arrêter| K[abandonnerSalon\nFirestore]
+  K --> A
+  A -->|window.beforeunload| K
+
+  style A fill:#10b981,color:#fff,stroke:none
+  style F fill:#46178f,color:#fff,stroke:none
+  style J fill:#f59e0b,color:#000,stroke:none
+  style K fill:#ef4444,color:#fff,stroke:none
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Architecture système -->
+  <div class="card card-full">
+    <div class="card-header">
+      <span class="badge badge-arch">Architecture</span>
+      <span class="card-title">Composants système</span>
+    </div>
+    <div class="card-body">
+      <div class="mermaid">
+graph LR
+  subgraph Client["🖥️ Client (SPA — GitHub Pages)"]
+    direction TB
+    APP[App.jsx\nOrchestration]
+    subgraph Screens["Écrans"]
+      SW[ScreenWelcome]
+      SL[ScreenLobby]
+      SQL[ScreenQuizLive]
+      SWA[ScreenWaiting]
+      SD[ScreenDashboard]
+      SP[ScreenPodium]
+    end
+    subgraph Lib["Librairies"]
+      AV[avatars.js\nDiceBear helper]
+      FS[firestore.js\nFirebase SDK]
+      NK[useLiveQuiz.js\nHook]
+    end
+  end
+
+  subgraph Firebase["🔥 Firebase (Google Cloud)"]
+    direction TB
+    FFS[Firestore\nRooms + Players + Quizzes]
+    FAUTH[Anonymous Auth\nuserId]
+  end
+
+  subgraph External["🌐 Services externes"]
+    DC[DiceBear API\nAvatars SVG\nbottts / emoji / pixel]
+    GH[GitHub Pages\nHosting CDN]
+  end
+
+  APP --> Screens
+  APP --> Lib
+  FS -->|onSnapshot| FFS
+  FS -->|setDoc / updateDoc| FFS
+  FAUTH --> FS
+  AV -->|fetch svg| DC
+  GH --> Client
+
+  style Client fill:#1e1e3a,stroke:#6366f1,color:#e2e8f0
+  style Firebase fill:#1a1a0f,stroke:#f59e0b,color:#e2e8f0
+  style External fill:#0f1a1a,stroke:#10b981,color:#e2e8f0
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. ER Diagram Firestore -->
+  <div class="card">
+    <div class="card-header">
+      <span class="badge badge-er">Données</span>
+      <span class="card-title">Schéma Firestore</span>
+    </div>
+    <div class="card-body">
+      <div class="mermaid">
+erDiagram
+  ROOMS {
+    string code PK
+    string quizId FK
+    string statut
+    number questionCourante
+    timestamp questionDemarreeA
+    boolean abandonne
+    timestamp creeA
+  }
+
+  PLAYERS {
+    string idUtilisateur PK
+    string prenom
+    string styleAvatar
+    map reponses
+    number score
+    string statut
+    string groupe
+    string tempsPasse
+  }
+
+  QUIZZES {
+    string id PK
+    string title
+    number questionCount
+    array questions
+    timestamp creeA
+  }
+
+  QUESTIONS {
+    string question
+    array options
+    number correctIndex
+    string category
+  }
+
+  ROOMS ||--o{ PLAYERS : "players subcollection"
+  ROOMS }o--|| QUIZZES : "quizId ref"
+  QUIZZES ||--|{ QUESTIONS : "questions array"
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Test bots -->
+  <div class="card">
+    <div class="card-header">
+      <span class="badge badge-test">Test</span>
+      <span class="card-title">Infrastructure de test — 10 bots Playwright</span>
+    </div>
+    <div class="card-body">
+      <div class="mermaid">
+flowchart TD
+  CLI["⌨️ node test-emulators.mjs ROOM_CODE"] --> MAIN
+
+  subgraph MAIN["Promise.allSettled — 10 bots parallèles"]
+    direction LR
+    B1["📱 iPhone 13\nZara-9 😄"]
+    B2["📱 Pixel 5\nKael Voss 🎮"]
+    B3["🖥️ iPad Pro\nNyra Strix 🤖"]
+    B4["📱 iPhone SE\nVex Morrow 🎮"]
+    B5["🦊 Firefox\nCaden-Z 😄"]
+    B6["🧭 WebKit\nSable Rho 🎮"]
+    B7["📱 Galaxy S8\nOrion Flux 🤖"]
+    B8["📱 Moto G4\nNyx Vael 😄"]
+  end
+
+  MAIN -->|Stagger 0.5s| JOIN[inscrireJoueur\nFirestore]
+  JOIN --> WAIT[Attente lancerPartie\n⏱ 3 min max]
+  WAIT --> LOOP{Question visible?}
+  LOOP -->|Oui| THINK["⏳ think 2–12s\naleatoire"]
+  THINK --> CLICK[Click réponse]
+  CLICK --> LOOP
+  LOOP -->|Timeout / fin| RESULT
+
+  RESULT["📊 Tableau résultats\nrépondu / skipped / avg temps"]
+
+  style CLI fill:#1e293b,color:#94a3b8,stroke:#334155
+  style RESULT fill:#10b981,color:#000,stroke:none
+  style WAIT fill:#46178f,color:#e2e8f0,stroke:none
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    themeVariables: {
+      primaryColor: '#6366f1',
+      primaryTextColor: '#f1f5f9',
+      primaryBorderColor: '#4f46e5',
+      lineColor: '#64748b',
+      secondaryColor: '#1e293b',
+      tertiaryColor: '#0f172a',
+      background: '#1e1e2e',
+      mainBkg: '#1e1e2e',
+      nodeBorder: '#334155',
+      clusterBkg: '#1e1e2e',
+      titleColor: '#f1f5f9',
+      edgeLabelBackground: '#1e293b',
+      sequenceNumberColor: '#10b981',
+      actorBkg: '#1e293b',
+      actorBorder: '#6366f1',
+      actorTextColor: '#f1f5f9',
+      activationBorderColor: '#10b981',
+      activationBkgColor: '#14532d',
+      noteBkgColor: '#312e81',
+      noteTextColor: '#e2e8f0',
+      fontSize: '14px',
+    },
+    flowchart: { curve: 'basis', padding: 20 },
+    sequence: { mirrorActors: false, bottomMarginAdj: 10 },
+  })
+</script>
+
+</body>
+</html>
