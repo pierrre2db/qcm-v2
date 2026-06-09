@@ -91,6 +91,15 @@ export function ScreenQuizLive({ question, indice, total, questionDemarreeA, onR
             <span className="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Live</span>
           </div>
         )}
+        {question.imageUrl && (
+          <div className="border-b border-slate-100 bg-slate-50 flex justify-center overflow-hidden">
+            <img
+              src={question.imageUrl}
+              alt="Illustration"
+              className="max-h-48 w-full object-contain"
+            />
+          </div>
+        )}
         <div className="px-6 py-5 text-center">
           <h3 className="text-lg md:text-xl font-extrabold text-slate-900 leading-snug">
             <Md>{question.question}</Md>

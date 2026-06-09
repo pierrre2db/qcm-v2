@@ -30,11 +30,12 @@ export function normalizeQuiz(data) {
       const correctIndex = LETTERS.indexOf((q.bonne_reponse ?? '').toUpperCase())
       return {
         id: q.id,
-        category: q.difficulte ? `Difficulté ${q.difficulte}/5` : '',
+        category: q.categorie ?? (q.difficulte ? `Difficulté ${q.difficulte}/5` : ''),
         question: q.question ?? '',
         options,
         correctIndex: correctIndex >= 0 ? correctIndex : 0,
-        explanation: q.pourquoi ?? ''
+        explanation: q.pourquoi ?? '',
+        imageUrl: q.image ?? ''
       }
     })
   }

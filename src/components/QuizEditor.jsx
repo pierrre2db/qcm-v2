@@ -3,7 +3,7 @@ import { useState } from 'react'
 const LETTERS = ['A', 'B', 'C', 'D']
 
 function emptyQuestion(id) {
-  return { _id: id, question: '', optionA: '', optionB: '', optionC: '', optionD: '', correct: 0, category: '', explanation: '' }
+  return { _id: id, question: '', optionA: '', optionB: '', optionC: '', optionD: '', correct: 0, category: '', explanation: '', imageUrl: '' }
 }
 
 function buildRawData(title, questions) {
@@ -16,7 +16,8 @@ function buildRawData(title, questions) {
       options: { A: q.optionA, B: q.optionB, C: q.optionC, D: q.optionD },
       bonne_reponse: LETTERS[q.correct],
       pourquoi: q.explanation,
-      ...(q.category ? { categorie: q.category } : {})
+      ...(q.category ? { categorie: q.category } : {}),
+      ...(q.imageUrl ? { image: q.imageUrl } : {})
     }))
   }
 }
@@ -42,7 +43,8 @@ function loadFromRaw(rawData) {
       optionD: opts.D,
       correct: correct >= 0 ? correct : 0,
       category: q.categorie ?? q.category ?? '',
-      explanation: q.pourquoi ?? q.explanation ?? ''
+      explanation: q.pourquoi ?? q.explanation ?? '',
+      imageUrl: q.image ?? q.imageUrl ?? ''
     }
   })
   return { title, questions }
@@ -199,35 +201,38 @@ export function QuizEditor({ initialRawData = null, editingId = null, onSave, on
 
                   {/* Options */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Options de réponse *</label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Options de réponse *</label>
+                      <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">👆 Cliquez sur la lettre = bonne réponse</span>
+                    </div>
                     <div className="space-y-2">
                       {(['optionA', 'optionB', 'optionC', 'optionD']).map((field, li) => {
                         const isCorrect = q.correct === li
                         return (
-                          <div key={field} className={`flex items-center gap-2.5 rounded-xl px-3 py-2 border-2 transition ${isCorrect ? 'border-emerald-400 bg-emerald-50' : 'border-slate-100 bg-slate-50'}`}>
+                          <div key={field} className={`flex items-center gap-2.5 rounded-xl border-2 transition ${isCorrect ? 'border-emerald-400 bg-emerald-50' : 'border-slate-200 bg-white hover:border-slate-300'}`}>
                             <button
                               type="button"
                               onClick={() => updateQuestion(idx, 'correct', li)}
-                              className={`w-6 h-6 shrink-0 rounded-full border-2 flex items-center justify-center transition font-black text-xs
-                                ${isCorrect ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-slate-300 hover:border-emerald-400'}`}
-                              title="Définir comme bonne réponse"
+                              className={`w-11 self-stretch flex items-center justify-center rounded-l-xl shrink-0 transition font-black text-sm border-r-2
+                                ${isCorrect
+                                  ? 'bg-emerald-500 text-white border-emerald-400'
+                                  : 'bg-slate-100 text-slate-500 border-slate-200 hover:bg-emerald-100 hover:text-emerald-700 hover:border-emerald-200'}`}
+                              title="Marquer comme bonne réponse"
                             >
                               {isCorrect ? '✓' : LETTERS[li]}
                             </button>
-                            <span className={`text-xs font-bold w-4 shrink-0 ${isCorrect ? 'text-emerald-700' : 'text-slate-400'}`}>{LETTERS[li]}</span>
                             <input
                               type="text"
                               value={q[field]}
                               onChange={e => updateQuestion(idx, field, e.target.value)}
-                              placeholder={`Option ${LETTERS[li]}${li < 2 ? ' (requise)' : ''}`}
-                              className="flex-1 bg-transparent text-sm text-slate-700 focus:outline-none placeholder-slate-300 font-medium"
+                              placeholder={`Option ${LETTERS[li]}${li < 2 ? ' (requise)' : ' (optionnelle)'}`}
+                              className={`flex-1 py-2.5 pr-3 bg-transparent text-sm focus:outline-none placeholder-slate-300 font-medium ${isCorrect ? 'text-emerald-800' : 'text-slate-700'}`}
                             />
-                            {isCorrect && <span className="text-xs text-emerald-600 font-bold shrink-0">✓ Correcte</span>}
+                            {isCorrect && <span className="text-[10px] text-emerald-600 font-black shrink-0 pr-3 uppercase tracking-wide">✓ Correcte</span>}
                           </div>
                         )
                       })}
                     </div>
-                    <p className="text-xs text-slate-400">Cliquez sur le cercle pour marquer la bonne réponse.</p>
                   </div>
 
                   {/* Category + Explanation */}
@@ -252,6 +257,41 @@ export function QuizEditor({ initialRawData = null, editingId = null, onSave, on
                         className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400 transition"
                       />
                     </div>
+                  </div>
+
+                  {/* Image URL */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Image (URL) <span className="normal-case font-normal text-slate-400">— optionnelle, affichée au-dessus de la question</span></label>
+                    <div className="flex gap-2">
+                      <input
+                        type="url"
+                        value={q.imageUrl}
+                        onChange={e => updateQuestion(idx, 'imageUrl', e.target.value)}
+                        placeholder="https://exemple.com/image.jpg"
+                        className="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:border-blue-400 transition"
+                      />
+                      {q.imageUrl && (
+                        <button
+                          type="button"
+                          onClick={() => updateQuestion(idx, 'imageUrl', '')}
+                          className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-500 rounded-xl transition text-xs font-bold shrink-0"
+                          title="Retirer l'image"
+                        >✕</button>
+                      )}
+                    </div>
+                    {q.imageUrl && (
+                      <div className="mt-2 rounded-xl overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center max-h-40">
+                        <img
+                          src={q.imageUrl}
+                          alt="Aperçu"
+                          className="max-h-40 object-contain"
+                          onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex' }}
+                        />
+                        <div style={{display:'none'}} className="w-full h-20 items-center justify-center text-xs text-slate-400 gap-2">
+                          <span>⚠</span><span>URL invalide ou image non accessible</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

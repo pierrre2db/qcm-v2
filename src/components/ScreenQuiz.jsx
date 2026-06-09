@@ -37,6 +37,15 @@ export function ScreenQuiz({ currentQuestion, currentIndex, totalQuestions, sele
         </div>
 
         <div className="p-6 md:p-8 space-y-6">
+          {currentQuestion.imageUrl && (
+            <div className="rounded-2xl overflow-hidden border border-slate-100 bg-slate-50 flex justify-center">
+              <img
+                src={currentQuestion.imageUrl}
+                alt="Illustration"
+                className="max-h-56 w-full object-contain"
+              />
+            </div>
+          )}
           <h3 className="text-lg md:text-xl font-bold text-slate-900 leading-snug">
             <Md>{currentQuestion.question}</Md>
           </h3>
