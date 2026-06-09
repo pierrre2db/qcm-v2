@@ -23,7 +23,7 @@ export function normalizeQuiz(data) {
   const LETTERS = ['A', 'B', 'C', 'D']
 
   return {
-    meta: data.meta ?? { ...DEFAULT_META, title: data.titre_quiz ?? 'Quiz', subtitle: data.sous_titre ?? '' },
+    meta: data.meta ?? { ...DEFAULT_META, title: data.titre_quiz ?? '', subtitle: data.sous_titre ?? '' },
     groups: data.groups ?? defaultGroups(total),
     questions: data.questions.map(q => {
       const options = LETTERS.map(l => q.options?.[l]).filter(Boolean)

@@ -82,9 +82,16 @@ export default function App() {
   useEffect(() => {
     if (!isFirebaseConfigured) return
     signInAnon().then(user => { if (user) setUserId(user.uid) })
+    let autoLoaded = false
     const unsub = abonnerQuizzes(list => {
       setQuizList(list)
       setSelectedQuizId(prev => prev ?? (list.length > 0 ? list[0].id : null))
+      if (!autoLoaded && list.length > 0) {
+        autoLoaded = true
+        chargerQuizParId(list[0].id).then(doc => {
+          if (doc?.rawData) setQuizData(normalizeQuiz(doc.rawData))
+        })
+      }
     })
     return unsub
   }, [])
@@ -169,6 +176,11 @@ export default function App() {
       await inscrireJoueur(code, userId, name, avatarStyle)
       setScreen(S.LOBBY)
       return
+    }
+    // Solo: load selected quiz data (handles auto-selection case where quizData wasn't loaded)
+    if (selectedQuizId && isFirebaseConfigured) {
+      const doc = await chargerQuizParId(selectedQuizId)
+      if (doc?.rawData) setQuizData(normalizeQuiz(doc.rawData))
     }
     setScreen(S.QUIZ)
   }

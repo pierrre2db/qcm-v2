@@ -75,7 +75,7 @@ export function ScreenWelcome({ meta, onJoin, onCreateSession, leaderboard, onAd
           {meta.badge}
         </span>
         <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
-          Défi Hygiène &amp; Sécurité Alimentaire
+          {meta.title || 'Défi — Testez vos connaissances'}
         </h2>
         <p className="text-slate-500 text-sm">Testez vos connaissances ou rejoignez votre classe.</p>
       </div>
