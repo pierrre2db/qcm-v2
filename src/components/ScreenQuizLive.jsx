@@ -49,12 +49,9 @@ export function ScreenQuizLive({ question, indice, total, questionDemarreeA, onR
 
       {/* Timer + progression */}
       <div className="flex items-center gap-4">
-        {/* Circular timer */}
         <div className="relative shrink-0 flex items-center justify-center" style={{ width: 88, height: 88 }}>
           <svg width="88" height="88" className="-rotate-90">
-            {/* Track */}
             <circle cx="44" cy="44" r={RADIUS} fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="7" />
-            {/* Progress */}
             <circle
               cx="44" cy="44" r={RADIUS}
               fill="none"
@@ -71,7 +68,6 @@ export function ScreenQuizLive({ question, indice, total, questionDemarreeA, onR
           </span>
         </div>
 
-        {/* Question progress */}
         <div className="flex-1 space-y-1.5">
           <span className="text-white/70 text-xs font-bold uppercase tracking-widest">
             Question {indice + 1} / {total}
@@ -95,6 +91,16 @@ export function ScreenQuizLive({ question, indice, total, questionDemarreeA, onR
           <h3 className="text-lg md:text-xl font-extrabold text-slate-900 leading-snug">
             <Md>{question.question}</Md>
           </h3>
+          {/* Image Cloudinary */}
+          {question.imageUrl && (
+            <div className="mt-4 flex justify-center">
+              <img
+                src={question.imageUrl}
+                alt=""
+                className="max-h-52 w-auto rounded-xl object-contain border border-slate-100 shadow-sm"
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -134,7 +140,6 @@ export function ScreenQuizLive({ question, indice, total, questionDemarreeA, onR
         })}
       </div>
 
-      {/* Status message */}
       {confirme && (
         <div className="text-center">
           <p className="text-white/80 text-sm font-semibold">
