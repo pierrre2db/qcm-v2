@@ -332,7 +332,7 @@ export default function App() {
           <ScreenResult
             username={username}
             score={finalResult.score}
-            totalQuestions={finalResult.totalQuestions ?? questions.length}
+            totalQuestions={finalResult?.totalQuestions ?? questions.length}
             timeSpent={finalResult.timeSpent}
             groups={groups}
             onRestart={handleRestart}
@@ -348,7 +348,7 @@ export default function App() {
           <ScreenDashboard
             roomCode={roomId}
             players={livePlayers}
-            totalQuestions={finalResult.totalQuestions ?? questions.length}
+            totalQuestions={finalResult?.totalQuestions ?? questions.length}
             salon={salon}
             currentQuestion={questions[salon?.questionCourante] ?? null}
             currentCorrectIndex={questions[salon?.questionCourante]?.correctIndex ?? -1}
