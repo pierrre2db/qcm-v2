@@ -41,6 +41,17 @@ export function ScreenQuiz({ currentQuestion, currentIndex, totalQuestions, sele
             <Md>{currentQuestion.question}</Md>
           </h3>
 
+          {/* Image Cloudinary */}
+          {currentQuestion.imageUrl && (
+            <div className="flex justify-center">
+              <img
+                src={currentQuestion.imageUrl}
+                alt=""
+                className="max-h-64 w-auto rounded-2xl object-contain border border-slate-100 shadow-md"
+              />
+            </div>
+          )}
+
           <div className="grid grid-cols-1 gap-3.5">
             {currentQuestion.options.map((option, idx) => {
               const isSelected = selectedOption === idx
