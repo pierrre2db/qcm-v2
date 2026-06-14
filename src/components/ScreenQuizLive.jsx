@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Md } from './Md'
 
-const DUREE_QUESTION = 30
+const DUREE_QUESTION = 60
 
 const ANSWER_STYLES = [
   { bg: 'bg-[#E21B3C]', hover: 'hover:bg-[#c5182f] active:bg-[#a81427]', shadow: 'shadow-[#E21B3C]/40', shape: '▲', label: 'A' },
