@@ -240,7 +240,7 @@ export function ScreenDashboard({ roomCode, players, totalQuestions, salon, curr
           {currentQuestion && (
             <div className="px-5 py-4 border-b border-slate-100">
               <p className="text-slate-900 font-extrabold text-base md:text-lg leading-snug text-center">
-                {currentQuestion.question}
+                <Md>{currentQuestion.question}</Md>
               </p>
             </div>
           )}
@@ -252,11 +252,9 @@ export function ScreenDashboard({ roomCode, players, totalQuestions, salon, curr
                 const c = ANSWER_COLORS[idx] || ANSWER_COLORS[0]
                 const isCorrect = idx === currentCorrectIndex
                 return (
-                  <div key={idx} className={`${c.bg} rounded-xl px-3 py-2.5 flex items-center gap-2
-                    ${isCorrect ? 'ring-2 ring-white ring-offset-1 shadow-lg' : 'opacity-80'}`}>
+                  <div key={idx} className={`${c.bg} rounded-xl px-3 py-2.5 flex items-center gap-2`}>
                     <span className="text-white/80 font-black text-base shrink-0">{c.shape}</span>
-                    <span className="text-white font-semibold text-xs flex-1 leading-tight">{opt}</span>
-                    {isCorrect && <span className="text-white font-black text-sm shrink-0">✓</span>}
+                    <span className="text-white font-semibold text-xs flex-1 leading-tight"><Md>{opt}</Md></span>
                   </div>
                 )
               })}
