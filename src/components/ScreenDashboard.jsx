@@ -3,7 +3,7 @@ import QRious from 'qrious'
 import { getAvatarUrl, getInitials } from '../lib/avatars'
 import { Md } from './Md'
 
-const DUREE_QUESTION = 30
+const DUREE_QUESTION = 60
 
 const ANSWER_COLORS = [
   { bg: 'bg-[#E21B3C]', text: 'text-white', shape: '▲', label: 'A' },
