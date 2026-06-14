@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
-import QRious from 'qrious'
+import { useEffect, useState } from 'react'
 import { isFirebaseConfigured } from '../lib/firebase'
 import { AVATAR_STYLES, getAvatarUrl, loadSavedStyle, saveStyle } from '../lib/avatars'
 
@@ -8,7 +7,6 @@ function escapeHtml(text) {
 }
 
 export function ScreenWelcome({ meta, onJoin, onCreateSession, leaderboard, onAdmin, quizList, selectedSoloQuizId, onSelectSoloQuiz, selectedLiveQuizId, onSelectLiveQuiz }) {
-  const qrRef = useRef(null)
   const [username, setUsername] = useState('')
   const [roomCode, setRoomCode] = useState('')
   const [error, setError] = useState('')
@@ -25,16 +23,6 @@ export function ScreenWelcome({ meta, onJoin, onCreateSession, leaderboard, onAd
     }
   }, [])
 
-  useEffect(() => {
-    if (!qrRef.current) return
-    new QRious({
-      element: qrRef.current,
-      value: window.location.href.split('?')[0],
-      size: 140,
-      background: '#ffffff',
-      foreground: '#059669',
-      level: 'H'
-    })
   }, [])
 
   function handleJoin() {
@@ -241,7 +229,7 @@ export function ScreenWelcome({ meta, onJoin, onCreateSession, leaderboard, onAd
             <span className="bg-emerald-500/20 text-emerald-300 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-widest">Espace Session</span>
             <h3 className="text-xl font-bold tracking-tight">Projeter le Dashboard</h3>
             <p className="text-slate-300 text-xs md:text-sm leading-relaxed">
-              Générez un code de classe, affichez un QR Code au projecteur et observez la progression en temps réel.
+              Sélectionnez un quiz, créez la session — le QR code apparaît ensuite sur le tableau de bord.
             </p>
 
             {/* Live quiz selector */}
@@ -283,9 +271,6 @@ export function ScreenWelcome({ meta, onJoin, onCreateSession, leaderboard, onAd
             {!isFirebaseConfigured && (
               <p className="text-xs text-amber-400">Configurez Firebase dans src/lib/firebase.js</p>
             )}
-          </div>
-          <div className="flex justify-center md:justify-end shrink-0">
-            <canvas ref={qrRef} className="rounded-xl" />
           </div>
         </div>
       </div>
