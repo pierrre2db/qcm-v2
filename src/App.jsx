@@ -201,7 +201,7 @@ export default function App() {
   }
 
   function handleSessionEndComplete() {
-    const total = questionsJouees ?? questions.length
+    const total = questionsJouees ?? live.salon?.totalQuestions ?? questions.length
     const score = live.scoreActuel
     const diff = Math.floor((new Date() - (quiz.startTime || new Date())) / 1000)
     const m = String(Math.floor(diff / 60)).padStart(2, '0')
