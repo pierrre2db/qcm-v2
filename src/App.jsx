@@ -16,7 +16,7 @@ import { ScreenSessionEnd } from './components/ScreenSessionEnd'
 import { Toast, useToast } from './components/Toast'
 import { useQuizStore } from './hooks/useQuizStore'
 import { useLiveQuiz } from './hooks/useLiveQuiz'
-import { signInAnon, isFirebaseConfigured } from './lib/firebase'
+import { isFirebaseConfigured } from './lib/firebase'
 import {
   creerSalon, inscrireJoueur, lancerPartie,
   passerQuestionSuivante, terminerSalon, abandonnerSalon,
@@ -85,7 +85,9 @@ export default function App() {
   // ── Init ────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!isFirebaseConfigured) return
-    signInAnon().then(user => { if (user) setUserId(user.uid) })
+    const pid = sessionStorage.getItem('qcm_pid') || crypto.randomUUID()
+    sessionStorage.setItem('qcm_pid', pid)
+    setUserId(pid)
     const unsub = abonnerQuizzes(list => {
       setQuizList(list)
       setSelectedSoloQuizId(prev => {
