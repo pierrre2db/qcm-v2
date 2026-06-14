@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import QRious from 'qrious'
 import { getAvatarUrl, getInitials } from '../lib/avatars'
+import { Md } from './Md'
 
 const DUREE_QUESTION = 30
 
