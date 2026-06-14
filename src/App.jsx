@@ -71,7 +71,6 @@ export default function App() {
   const [livePlayers, setLivePlayers] = useState([])
   const [salon, setSalon] = useState(null)
   const [finalResult, setFinalResult] = useState(null)
-  const [questionsJouees, setQuestionsJouees] = useState(null)
   const [dernierReponse, setDernierReponse] = useState(null)
   const [leaderboard, setLeaderboard] = useState(loadLeaderboard)
   const [passInput, setPassInput] = useState('')
