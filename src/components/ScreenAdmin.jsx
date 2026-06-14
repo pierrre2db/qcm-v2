@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { normalizeQuiz } from '../lib/normalizeQuiz'
+import { uploadToCloudinary } from '../lib/cloudinary'
 import { ajouterQuiz, supprimerQuiz } from '../lib/firestore'
 
 function formatDate(ts) {
@@ -72,7 +73,7 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onBack }) {
   const [promptCopied, setPromptCopied] = useState(false)
   const [showFormat, setShowFormat] = useState(false)
 
-  // Upload
+  // Upload quiz JSON
   const [texte, setTexte] = useState('')
   const [preview, setPreview] = useState(null)
   const [erreur, setErreur] = useState('')
@@ -80,6 +81,9 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onBack }) {
   const [drag, setDrag] = useState(false)
   const [success, setSuccess] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
+
+  // Images par question : { [questionIndex]: { url, uploading, error } }
+  const [questionImages, setQuestionImages] = useState({})
 
   async function copyPrompt() {
     try { await navigator.clipboard.writeText(buildPrompt(sujet, nombre)) } catch {
@@ -93,7 +97,7 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onBack }) {
   }
 
   function parseAndPreview(text) {
-    setErreur(''); setPreview(null); setSuccess(false)
+    setErreur(''); setPreview(null); setSuccess(false); setQuestionImages({})
     try {
       const raw = JSON.parse(text)
       const normalized = normalizeQuiz(raw)
@@ -124,13 +128,44 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onBack }) {
     else setErreur('Fichier .json requis.')
   }
 
+  async function handleImageUpload(questionIndex, file) {
+    if (!file) return
+    setQuestionImages(prev => ({ ...prev, [questionIndex]: { uploading: true, url: null, error: null } }))
+    try {
+      const url = await uploadToCloudinary(file)
+      setQuestionImages(prev => ({ ...prev, [questionIndex]: { uploading: false, url, error: null } }))
+    } catch (e) {
+      setQuestionImages(prev => ({ ...prev, [questionIndex]: { uploading: false, url: null, error: e.message } }))
+    }
+  }
+
+  function removeImage(questionIndex) {
+    setQuestionImages(prev => {
+      const next = { ...prev }
+      delete next[questionIndex]
+      return next
+    })
+  }
+
   async function handleAjouter() {
     if (!preview) return
     setLoading(true)
     try {
-      const id = await ajouterQuiz(preview.raw, preview.normalized.meta.title, preview.normalized.questions.length)
+      // Merge imageUrls into raw data before saving to Firestore
+      const rawWithImages = {
+        ...preview.raw,
+        questions: preview.raw.questions.map((q, idx) => ({
+          ...q,
+          imageUrl: questionImages[idx]?.url ?? null
+        }))
+      }
+      const id = await ajouterQuiz('
+        rawWithImages,
+        preview.normalized.meta.title,
+        preview.normalized.questions.length
+      )
       onQuizAdded({ id, title: preview.normalized.meta.title, questionCount: preview.normalized.questions.length })
-      setSuccess(true); setTexte(''); setPreview(null)
+      setSuccess(true); setTexte(''); setPreview(null); setQuestionImages({})
     } catch (e) {
       setErreur('Erreur Firestore : ' + e.message)
     } finally {
@@ -164,12 +199,12 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onBack }) {
         </button>
       </div>
 
-      {/* ── GENERATE WITH CLAUDE ── */}
+      {/* ── GENERATE WITH NOTEBOOKLM ── */}
       <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-6 rounded-3xl shadow-xl space-y-5 text-white">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-extrabold text-lg">Générer un quiz avec NotebookLM</h3>
-            <p className="text-slate-400 text-xs mt-0.5">Remplis le sujet → copie le prompt → colle dans NotebookLM → récupère le JSON</p>
+            <p className="text-slate-400 text-xs mt-0.5">Remplis le sujet → copie le prompt → colle dans NotebookLM → recupère le JSON</p>
           </div>
           <button
             onClick={() => setShowFormat(v => !v)}
@@ -180,7 +215,6 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onBack }) {
           </button>
         </div>
 
-        {/* Format info panel */}
         {showFormat && (
           <div className="bg-slate-950/50 rounded-2xl p-4 space-y-3 text-sm">
             <p className="font-bold text-emerald-400 text-xs uppercase tracking-wider">Format JSON attendu</p>
@@ -189,12 +223,11 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onBack }) {
               <p><strong className="text-white">bonne_reponse</strong> : lettre A, B, C ou D</p>
               <p><strong className="text-white">difficulte</strong> : 1 (facile) → 5 (expert)</p>
               <p><strong className="text-white">Markdown</strong> : **gras**, *italique*, - listes dans question/options/pourquoi</p>
-              <p><strong className="text-white">Retours à la ligne</strong> : écrire <code className="bg-white/10 px-1 rounded">\n</code> dans les strings JSON</p>
+              <p><strong className="text-white">imageUrl</strong> : optionnel — ajouté via le formulaire après import</p>
             </div>
           </div>
         )}
 
-        {/* Inputs */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="sm:col-span-2 space-y-1">
             <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Sujet du quiz</label>
@@ -218,12 +251,9 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onBack }) {
           </div>
         </div>
 
-        {/* Prompt preview */}
         <div className="space-y-2">
           <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Prompt généré</label>
-          <div className="relative">
-            <pre className="bg-slate-950/60 rounded-2xl p-4 text-xs text-slate-300 font-mono whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto custom-scrollbar">{prompt}</pre>
-          </div>
+          <pre className="bg-slate-950/60 rounded-2xl p-4 text-xs text-slate-300 font-mono whitespace-pre-wrap leading-relaxed max-h-48 overflow-y-auto">{prompt}</pre>
         </div>
 
         <button
@@ -232,19 +262,9 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onBack }) {
             ${promptCopied ? 'bg-emerald-500 text-white' : 'bg-white text-slate-900 hover:bg-slate-100'}`}
         >
           {promptCopied ? (
-            <>
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-              </svg>
-              <span>Copié !</span>
-            </>
+            <><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg><span>Copié !</span></>
           ) : (
-            <>
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-              <span>Copier le prompt</span>
-            </>
+            <><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2" /></svg><span>Copier le prompt</span></>
           )}
         </button>
       </div>
@@ -265,7 +285,7 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onBack }) {
                 <button
                   onClick={() => handleSupprimer(q.id)}
                   disabled={deletingId === q.id}
-                  className="bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold p-2.5 rounded-xl transition disabled:opacity-50"
+                  className="bg-rose-50 hover:bo-rose-100 text-rose-600 font-bold p-2.5 rounded-xl transition disabled:opacity-50"
                   title="Supprimer"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -281,7 +301,7 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onBack }) {
       {/* ── ADD QUIZ ── */}
       <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-md space-y-5">
         <h3 className="font-extrabold text-slate-900 text-lg">Ajouter un quiz</h3>
-        <p className="text-xs text-slate-500">Collez le JSON reçu de Claude, ou glissez le fichier .json.</p>
+        <p className="text-xs text-slate-500">Collez le JSON reçu de NotebookLM / Claude, ou glissez le fichier .json.</p>
 
         <div
           onDragOver={e => { e.preventDefault(); setDrag(true) }}
@@ -315,13 +335,88 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onBack }) {
         {success && <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3 text-sm text-emerald-700 font-bold">✓ Quiz ajouté à la bibliothèque !</div>}
 
         {preview && (
-          <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 space-y-2">
-            <p className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Aperçu</p>
-            <p className="font-extrabold text-slate-900">{preview.normalized.meta.title}</p>
-            <div className="flex gap-2 text-xs">
-              <span className="bg-white border border-emerald-200 text-emerald-800 font-bold px-2.5 py-1 rounded-full">{preview.normalized.questions.length} questions</span>
+          <div className="space-y-4">
+            {/* Preview header */}
+            <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 space-y-2">
+              <p className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Aperçu</p>
+              <p className="font-extrabold text-slate-900">{preview.normalized.meta.title}</p>
+              <div className="flex gap-2 text-xs">
+                <span className="bg-white border border-emerald-200 text-emerald-800 font-bold px-2.5 py-1 rounded-full">
+                  {preview.normalized.questions.length} questions
+                </span>
+              </div>
             </div>
-            <p className="text-xs text-slate-500 italic">Q1 : {preview.normalized.questions[0]?.question?.slice(0, 100)}…</p>
+
+            {/* Images par question */}
+            <div className="space-y-3">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Images par question (optionnel)
+              </p>
+
+              {preview.normalized.questions.map((q, idx) => {
+                const imgState = questionImages[idx]
+                return (
+                  <div key={idx} className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex items-start gap-4">
+                    {/* Question number */}
+                    <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-slate-200 text-slate-600 font-bold text-xs shrink-0 mt-0.5">
+                      {idx + 1}
+                    </span>
+
+                    {/* Question text */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-slate-700 font-medium line-clamp-2 leading-snug">{q.question}</p>
+
+                      {/* Image upload / preview */}
+                      <div className="mt-3">
+                        {imgState?.url ? (
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={imgState.url}
+                              alt=""
+                              className="h-16 w-24 object-cover rounded-xl border border-slate-200"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeImage(idx)}
+                              className="text-xs text-rose-500 hover:text-rose-700 font-semibold transition"
+                            >
+                              Supprimer
+                            </button>
+                          </div>
+                        ) : imgState?.uploading ? (
+                          <div className="flex items-center gap-2 text-xs text-slate-400">
+                            <svg className="animate-spin h-4 w-4 text-emerald-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                            </svg>
+                            Upload en cours…
+                          </div>
+                        ) : (
+                          <label className="cursor-pointer inline-flex items-center gap-1.5 text-xs text-emerald-600 hover:text-emerald-700 font-semibold transition">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            Ajouter une image
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={e => handleImageUpload(idx, e.target.files[0])}
+                            />
+                          </label>
+                        )}
+                        {imgState?.error && (
+                          <p className="text-xs text-rose-500 mt-1">{imgState.error}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         )}
 
