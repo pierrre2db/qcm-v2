@@ -225,6 +225,11 @@ export default function App() {
     const liveQuiz = quizList.find(q => q.id === selectedLiveQuizId)
     const liveQuestionCount = liveQuiz?.questionCount ?? questions.length
     await creerSalon(code, liveQuestionCount, selectedLiveQuizId)
+    // Fix: load the live quiz data so ScreenDashboard shows the correct questions
+    if (selectedLiveQuizId) {
+      const quizDoc = await chargerQuizParId(selectedLiveQuizId)
+      if (quizDoc?.rawData) setQuizData(normalizeQuiz(quizDoc.rawData))
+    }
     showToast(`Salon créé : ${code}`)
   }
 
