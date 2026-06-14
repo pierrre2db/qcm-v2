@@ -34,7 +34,8 @@ export function normalizeQuiz(data) {
         question: q.question ?? '',
         options,
         correctIndex: correctIndex >= 0 ? correctIndex : 0,
-        explanation: q.pourquoi ?? ''
+        explanation: q.pourquoi ?? '',
+        imageUrl: q.imageUrl ?? null
       }
     })
   }
