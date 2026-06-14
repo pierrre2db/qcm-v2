@@ -240,6 +240,27 @@ export function ScreenWelcome({ meta, onJoin, onCreateSession, leaderboard, onAd
             <p className="text-slate-300 text-xs md:text-sm leading-relaxed">
               Générez un code de classe, affichez un QR Code géant au projecteur et observez la progression de tous vos élèves en temps réel.
             </p>
+            {quizList && quizList.length > 0 && (
+              <div className="space-y-2">
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">Quiz pour la session live</label>
+                <div className="flex flex-wrap gap-2">
+                  {quizList.map(q => (
+                    <button
+                      key={q.id}
+                      onClick={() => onSelectQuiz(q.id)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition border
+                        ${selectedQuizId === q.id
+                          ? 'bg-emerald-500 text-white border-emerald-400 shadow-md'
+                          : 'bg-white/10 text-slate-300 border-white/20 hover:bg-white/20 hover:border-white/40'
+                        }`}
+                    >
+                      {q.title}
+                      <span className="ml-1 opacity-60">{q.questionCount}Q</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="flex flex-wrap gap-2 pt-1">
               <button
                 onClick={onCreateSession}
