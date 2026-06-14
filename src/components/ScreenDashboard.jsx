@@ -15,7 +15,7 @@ const ANSWER_COLORS = [
 export function ScreenDashboard({ roomCode, players, totalQuestions, salon, currentQuestion, currentCorrectIndex, onLancer, onQuestionSuivante, onTerminer, onClose }) {
   const qrRef = useRef(null)
   const [secondes, setSecondes] = useState(DUREE_QUESTION)
-  const [autoAvanceDeclenche, setAutoAvanceDeclenche] = useState(false)
+  const autoAvanceRef = useRef(false)
 
   const statut = salon?.statut ?? 'attente'
   const indiceQuestion = salon?.questionCourante ?? -1
@@ -35,14 +35,14 @@ export function ScreenDashboard({ roomCode, players, totalQuestions, salon, curr
 
   useEffect(() => {
     if (!estEnCours || !questionDemarreeA) return
-    setAutoAvanceDeclenche(false)
+    autoAvanceRef.current = false
 
     const calc = () => {
       const ecoule = Math.floor((new Date() - questionDemarreeA) / 1000)
       const restant = Math.max(0, DUREE_QUESTION - ecoule)
       setSecondes(restant)
-      if (restant === 0 && !autoAvanceDeclenche) {
-        setAutoAvanceDeclenche(true)
+      if (restant === 0 && !autoAvanceRef.current) {
+        autoAvanceRef.current = true
         onQuestionSuivante(indiceQuestion + 1)
       }
     }
