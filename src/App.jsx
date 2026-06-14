@@ -220,7 +220,9 @@ export default function App() {
     setLivePlayers([])
     setSalon({ statut: 'attente', questionCourante: -1 })
     setScreen(S.DASHBOARD)
-    await creerSalon(code, questions.length, selectedLiveQuizId)
+    const liveQuiz = quizList.find(q => q.id === selectedLiveQuizId)
+    const liveQuestionCount = liveQuiz?.questionCount ?? questions.length
+    await creerSalon(code, liveQuestionCount, selectedLiveQuizId)
     showToast(`Salon créé : ${code}`)
   }
 
