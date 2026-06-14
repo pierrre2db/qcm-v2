@@ -238,8 +238,9 @@ export default function App() {
   }
 
   async function handleQuestionSuivante(prochaineIndex) {
-    await passerQuestionSuivante(roomId, prochaineIndex, questions.length)
-    if (prochaineIndex >= questions.length) setSalon(s => ({ ...s, statut: 'termine' }))
+    const sessionTotal = live.salon?.totalQuestions ?? questions.length
+    await passerQuestionSuivante(roomId, prochaineIndex, sessionTotal)
+    if (prochaineIndex >= sessionTotal) setSalon(s => ({ ...s, statut: 'termine' }))
     else setSalon(s => ({ ...s, questionCourante: prochaineIndex }))
   }
 
@@ -330,7 +331,7 @@ export default function App() {
           <ScreenQuizLive
             question={live.questionCourante}
             indice={live.indiceQuestion}
-            total={questions.length}
+            total={live.salon?.totalQuestions ?? questions.length}
             questionDemarreeA={live.questionDemarreeA}
             onRepondre={handleReponseLive}
           />
@@ -340,7 +341,7 @@ export default function App() {
           <ScreenWaiting
             estCorrect={dernierReponse.estCorrect}
             indice={dernierReponse.indice}
-            total={questions.length}
+            total={live.salon?.totalQuestions ?? questions.length}
           />
         )}
 
@@ -364,7 +365,7 @@ export default function App() {
           <ScreenDashboard
             roomCode={roomId}
             players={livePlayers}
-            totalQuestions={finalResult?.totalQuestions ?? questions.length}
+            totalQuestions={live.salon?.totalQuestions ?? finalResult?.totalQuestions ?? questions.length}
             salon={salon}
             currentQuestion={questions[salon?.questionCourante] ?? null}
             currentCorrectIndex={questions[salon?.questionCourante]?.correctIndex ?? -1}
