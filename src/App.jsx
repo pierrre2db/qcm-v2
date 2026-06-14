@@ -130,7 +130,7 @@ export default function App() {
 
   // ── Player: react to salon changes ─────────────────────────────────────
   useEffect(() => {
-    if (!live.salon || screen === S.DASHBOARD) return
+    if (!live.salon || [S.DASHBOARD, S.PODIUM, S.ADMIN].includes(screen)) return
     const { statut, abandonne } = live.salon
     if (statut === 'attente' && screen !== S.LOBBY) setScreen(S.LOBBY)
     else if (statut === 'en-cours') {
@@ -213,8 +213,8 @@ export default function App() {
     setRoomId(code)
     setLivePlayers([])
     setSalon({ statut: 'attente', questionCourante: -1 })
-    await creerSalon(code, questions.length, selectedQuizId)
     setScreen(S.DASHBOARD)
+    await creerSalon(code, questions.length, selectedQuizId)
     showToast(`Salon créé : ${code}`)
   }
 
