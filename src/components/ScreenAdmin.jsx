@@ -159,7 +159,7 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onBack }) {
           imageUrl: questionImages[idx]?.url ?? null
         }))
       }
-      const id = await ajouterQuiz('
+      const id = await ajouterQuiz(
         rawWithImages,
         preview.normalized.meta.title,
         preview.normalized.questions.length
