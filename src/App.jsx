@@ -84,7 +84,15 @@ export default function App() {
     signInAnon().then(user => { if (user) setUserId(user.uid) })
     const unsub = abonnerQuizzes(list => {
       setQuizList(list)
-      setSelectedQuizId(prev => prev ?? (list.length > 0 ? list[0].id : null))
+      setSelectedQuizId(prev => {
+      const id = prev ?? (list.length > 0 ? list[0].id : null)
+      if (!prev && id) {
+        chargerQuizParId(id).then(doc => {
+          if (doc?.rawData) setQuizData(normalizeQuiz(doc.rawData))
+        })
+      }
+      return id
+    })
     })
     return unsub
   }, [])
