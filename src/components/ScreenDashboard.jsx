@@ -23,7 +23,8 @@ export function ScreenDashboard({ roomCode, players, totalQuestions, salon, curr
   const estEnCours = statut === 'en-cours'
   const estTermine = statut === 'termine'
 
-  const joinUrl = `${window.location.origin}/qcm-v2/?room=${roomCode}`
+  const prodOrigin = import.meta.env.PROD ? window.location.origin : 'https://pierrre2db.github.io'
+  const joinUrl = `${prodOrigin}/qcm-v2/?room=${roomCode}`
 
   useEffect(() => {
     if (!qrRef.current) return
