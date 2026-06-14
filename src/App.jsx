@@ -58,7 +58,8 @@ function saveToLeaderboard(name, score, time, groups) {
 export default function App() {
   // ── Quiz library ────────────────────────────────────────────────────────
   const [quizList, setQuizList] = useState([])
-  const [selectedQuizId, setSelectedQuizId] = useState(null)
+  const [selectedSoloQuizId, setSelectedSoloQuizId] = useState(null)
+  const [selectedLiveQuizId, setSelectedLiveQuizId] = useState(null)
   const [quizData, setQuizData] = useState(DEFAULT_QUIZ)
   const { meta, groups, questions } = quizData
 
@@ -87,24 +88,29 @@ export default function App() {
     signInAnon().then(user => { if (user) setUserId(user.uid) })
     const unsub = abonnerQuizzes(list => {
       setQuizList(list)
-      setSelectedQuizId(prev => {
-      const id = prev ?? (list.length > 0 ? list[0].id : null)
-      if (!prev && id) {
-        chargerQuizParId(id).then(doc => {
-          if (doc?.rawData) setQuizData(normalizeQuiz(doc.rawData))
-        })
-      }
-      return id
-    })
+      setSelectedSoloQuizId(prev => {
+        const id = prev ?? (list.length > 0 ? list[0].id : null)
+        if (!prev && id) {
+          chargerQuizParId(id).then(doc => {
+            if (doc?.rawData) setQuizData(normalizeQuiz(doc.rawData))
+          })
+        }
+        return id
+      })
+      setSelectedLiveQuizId(prev => prev ?? (list.length > 0 ? list[0].id : null))
     })
     return unsub
   }, [])
 
   // ── Quiz selection ──────────────────────────────────────────────────────
-  async function handleSelectQuiz(id) {
-    setSelectedQuizId(id)
+  async function handleSelectSoloQuiz(id) {
+    setSelectedSoloQuizId(id)
     const doc = await chargerQuizParId(id)
     if (doc?.rawData) { setQuizData(normalizeQuiz(doc.rawData)); quiz.reset() }
+  }
+
+  function handleSelectLiveQuiz(id) {
+    setSelectedLiveQuizId(id)
   }
 
   // ── Live subscriptions ──────────────────────────────────────────────────
@@ -214,7 +220,7 @@ export default function App() {
     setLivePlayers([])
     setSalon({ statut: 'attente', questionCourante: -1 })
     setScreen(S.DASHBOARD)
-    await creerSalon(code, questions.length, selectedQuizId)
+    await creerSalon(code, questions.length, selectedLiveQuizId)
     showToast(`Salon créé : ${code}`)
   }
 
@@ -289,8 +295,10 @@ export default function App() {
             leaderboard={leaderboard}
             onAdmin={handleAdminAccess}
             quizList={quizList}
-            selectedQuizId={selectedQuizId}
-            onSelectQuiz={handleSelectQuiz}
+            selectedSoloQuizId={selectedSoloQuizId}
+            onSelectSoloQuiz={handleSelectSoloQuiz}
+            selectedLiveQuizId={selectedLiveQuizId}
+            onSelectLiveQuiz={handleSelectLiveQuiz}
           />
         )}
 
