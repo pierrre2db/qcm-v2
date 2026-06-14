@@ -23,8 +23,6 @@ export function ScreenWelcome({ meta, onJoin, onCreateSession, leaderboard, onAd
     }
   }, [])
 
-  }, [])
-
   function handleJoin() {
     if (!username.trim()) {
       setError('Veuillez entrer un pseudonyme pour commencer.')
