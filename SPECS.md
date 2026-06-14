@@ -1,7 +1,7 @@
 # Spécification Fonctionnelle & Technique — QCM Live V2
 
 > Document de référence pour recoder ou déboguer l'application complète.  
-> Version **2.1** · Dernière mise à jour : juin 2026
+> Version **2.2** · Dernière mise à jour : juin 2026
 
 ---
 
@@ -11,6 +11,7 @@
 |---------|------|---------------|
 | 2.0 | juin 2026 | Première spécification complète |
 | 2.1 | juin 2026 | Mode toggle Solo/Live · Thème Kahoot! · Sync quiz temps réel · Abandon de session · Prompt NotebookLM |
+| 2.2 | juin 2026 | Images Cloudinary par question (upload admin + affichage quiz) · Fix meta header auto-load |
 
 ---
 
@@ -26,10 +27,11 @@
 8. [Format des données quiz](#8-format-des-données-quiz)
 9. [Algorithmes clés](#9-algorithmes-clés)
 10. [Configuration Firebase](#10-configuration-firebase)
-11. [Déploiement](#11-déploiement)
-12. [Sécurité & administration](#12-sécurité--administration)
-13. [Règles Firestore](#13-règles-firestore)
-14. [Thème visuel Kahoot!](#14-thème-visuel-kahoot)
+11. [Configuration Cloudinary](#11-configuration-cloudinary)
+12. [Déploiement](#12-déploiement)
+13. [Sécurité & administration](#13-sécurité--administration)
+14. [Règles Firestore](#14-règles-firestore)
+15. [Thème visuel Kahoot!](#15-thème-visuel-kahoot)
 
 ---
 
@@ -42,6 +44,7 @@ Application de quiz interactif multi-joueur synchronisé pour la salle de classe
 - Les élèves jouent simultanément depuis leur smartphone
 - Les questions et contenus sont entièrement séparés du code (données dans Firestore)
 - Un mode solo sans Firebase est également disponible
+- Les questions peuvent comporter une image hébergée sur Cloudinary
 
 **URL de production :** `https://pierrre2db.github.io/qcm-v2/`
 
@@ -55,6 +58,7 @@ Application de quiz interactif multi-joueur synchronisé pour la salle de classe
 | CSS | Tailwind CSS v4 | Via plugin `@tailwindcss/vite` |
 | Base de données | Firebase Firestore v12 | Temps réel via `onSnapshot` |
 | Authentification | Firebase Auth anonyme | Auto au chargement |
+| Stockage images | Cloudinary CDN | Upload direct browser, preset unsigned |
 | QR code | QRious | Rendu sur `<canvas>` |
 | Markdown | Composant maison `Md`/`MdBlock` | Zéro dépendance externe |
 | CI/CD | GitHub Actions | Déploiement sur GitHub Pages |
@@ -72,14 +76,15 @@ base: '/qcm-v2/'
 ```
 qcm-v2/
 ├── .github/workflows/
-│   └── deploy.yml              ← SEUL workflow actif (l'autre a causé page blanche, voir §11)
+│   └── deploy.yml              ← SEUL workflow actif (l'autre a causé page blanche, voir §12)
 ├── src/
 │   ├── data/
 │   │   └── afsca.json          ← Quiz intégré par défaut (ancien format)
 │   ├── lib/
 │   │   ├── firebase.js         ← Config Firebase + signInAnon() + isFirebaseConfigured
 │   │   ├── firestore.js        ← Toutes les opérations CRUD + abonnements temps réel
-│   │   └── normalizeQuiz.js    ← Convertit les deux formats JSON → format interne
+│   │   ├── normalizeQuiz.js    ← Convertit les deux formats JSON → format interne
+│   │   └── cloudinary.js       ← Upload image direct browser → Cloudinary CDN (v2.2)
 │   ├── hooks/
 │   │   ├── useQuizStore.js     ← État du quiz solo (sélection, score, timer)
 │   │   └── useLiveQuiz.js      ← État du quiz live (écoute Firestore, soumission)
@@ -89,14 +94,14 @@ qcm-v2/
 │   │   ├── Md.jsx              ← Renderer Markdown léger (Md inline, MdBlock)
 │   │   ├── ScreenWelcome.jsx   ← Accueil : toggle Solo/Live + leaderboard
 │   │   ├── ScreenLobby.jsx     ← Salle d'attente joueur (thème violet foncé)
-│   │   ├── ScreenQuiz.jsx      ← Quiz solo (avancement libre)
-│   │   ├── ScreenQuizLive.jsx  ← Quiz synchronisé (tap-to-answer, 4 couleurs)
+│   │   ├── ScreenQuiz.jsx      ← Quiz solo (avancement libre) + image Cloudinary
+│   │   ├── ScreenQuizLive.jsx  ← Quiz synchronisé (tap-to-answer, 4 couleurs) + image Cloudinary
 │   │   ├── ScreenWaiting.jsx   ← Attente question suivante (plein écran vert/rouge)
 │   │   ├── ScreenResult.jsx    ← Résultat final + groupe
 │   │   ├── ScreenReview.jsx    ← Correction détaillée question par question
 │   │   ├── ScreenDashboard.jsx ← Tableau de bord enseignant (3 phases)
 │   │   ├── ScreenPodium.jsx    ← Classement final après session live
-│   │   └── ScreenAdmin.jsx     ← Gestion bibliothèque quiz + générateur de prompt NotebookLM
+│   │   └── ScreenAdmin.jsx     ← Gestion bibliothèque quiz + upload images + prompt NotebookLM
 │   ├── App.jsx                 ← Orchestrateur central : états, transitions d'écrans
 │   └── index.css
 ├── public/
@@ -140,7 +145,7 @@ ScreenWelcome
   → choisit quiz dans la liste (chips)
   → clic "Commencer l'entraînement"
 ScreenQuiz
-  → répond question par question
+  → répond question par question (image Cloudinary affichée si présente)
   → clic "Valider" pour passer à la suivante
   → dernière question → score calculé → leaderboard mis à jour
 ScreenResult
@@ -165,6 +170,7 @@ ScreenLobby (thème violet foncé)
   → écoute salon via useLiveQuiz → quand statut = 'en-cours'
 ScreenQuizLive (thème violet foncé, boutons 4 couleurs)
   → voit la question courante (synchronisée avec Firestore)
+  → image Cloudinary affichée sous l'énoncé si présente
   → appuie sur une option (rouge/bleu/jaune/vert) → réponse immédiatement soumise
 ScreenWaiting (plein écran vert si correct, rouge si faux)
   → voit si sa réponse était correcte
@@ -229,7 +235,8 @@ ScreenAdmin
     · Glisser/déposer .json OU coller JSON dans textarea
     · Parsing + normalisation en temps réel
     · Aperçu : titre + nb questions + Q1 preview
-    · Clic "Ajouter à la bibliothèque" → ajouterQuiz() → Firestore
+    · Pour chaque question : upload image optionnel → Cloudinary CDN
+    · Clic "Ajouter à la bibliothèque" → merge imageUrls → ajouterQuiz() → Firestore
   → bouton "Retour" → ScreenWelcome
 ```
 
@@ -254,6 +261,7 @@ ScreenAdmin
 - Si URL contient `?room=CODE` → mode Live présélectionné + code pré-rempli
 - Touche Entrée = submit
 - `onJoin(name, code)` : en mode Solo, `code = ''`
+- Titre du quiz sélectionné affiché dans le Header dès le chargement (fix v2.2)
 
 **QR code :** généré avec `QRious` sur `window.location.href` (sans query string), taille 140px, couleur `#059669`.
 
@@ -278,6 +286,7 @@ ScreenAdmin
 - Fond violet foncé hérité de App
 - Barre progression globale (blanc/20) + barre timer (vert→amber→rouge selon temps)
 - Carte question blanche centrée avec `<Md>` pour le texte
+- **Image Cloudinary** (v2.2) : si `question.imageUrl`, affiche `<img>` sous l'énoncé (`max-h-52`, `rounded-xl`, `object-contain`)
 - **4 boutons réponse en grille 1col (mobile) / 2col (≥sm)** :
   - A : rouge `#E21B3C` + icône ▲
   - B : bleu `#1368CE` + icône ◆
@@ -287,6 +296,18 @@ ScreenAdmin
 - Après réponse : options non sélectionnées → `opacity-40 scale-97`, sélectionnée → ring blanc + `scale-102`
 - Message bas : "✓ Réponse enregistrée — en attente de la prochaine question"
 - Timer 60s synchronisé sur `questionDemarreeA`
+
+---
+
+### ScreenQuiz *(mode solo)*
+
+**Props :** `{ currentQuestion, currentIndex, totalQuestions, selectedOption, startTime, onSelect, onConfirm }`
+
+- Barre de progression + timer elapsed
+- Carte question blanche avec `<Md>` pour l'énoncé
+- **Image Cloudinary** (v2.2) : si `currentQuestion.imageUrl`, affiche `<img>` sous l'énoncé (`max-h-64`, `rounded-2xl`, `object-contain`, `border`, `shadow-md`)
+- Grille d'options A/B/C/D avec sélection radio
+- Bouton "Valider" désactivé tant qu'aucune option sélectionnée
 
 ---
 
@@ -355,8 +376,14 @@ Trois branches selon `salon.statut` :
 - Zone drag-and-drop + `<input type="file" accept=".json">`
 - Textarea collage JSON
 - `parseAndPreview(text)` → `normalizeQuiz()` → aperçu ou erreur
+- **Upload image par question (v2.2)** :
+  - Pour chaque question de l'aperçu : `<input type="file" accept="image/*">`
+  - `handleImageUpload(questionIndex, file)` → `uploadToCloudinary(file)` → state `questionImages[idx].url`
+  - États : `{ uploading: true }` pendant upload, `{ url }` après succès, `{ error }` en cas d'échec
+  - Aperçu miniature de l'image uploadée + bouton supprimer
 - Bouton "Ajouter à la bibliothèque" activé seulement si `preview !== null`
-- → `ajouterQuiz(raw, title, questionCount)` → `onQuizAdded({ id, title, questionCount })`
+- Avant save : merge `questionImages` → `rawWithImages.questions[idx].imageUrl = url ?? null`
+- → `ajouterQuiz(rawWithImages, title, questionCount)` → `onQuizAdded({ id, title, questionCount })`
 
 ---
 
@@ -406,6 +433,7 @@ Trois branches selon `salon.statut` :
 - Mode clair : fond blanc, textes slate, boutons `bg-slate-100`
 - Badge "Live" (rose, animate-pulse) si `isLive`
 - Bouton "Quitter le Salon" si `isLive`
+- **Fix v2.2** : `meta.title` se met à jour avec le quiz sélectionné dès le chargement
 
 ---
 
@@ -434,9 +462,11 @@ rooms/{roomId}/players/{userId}         ← un document par joueur
 quizzes/{quizId}                        ← bibliothèque de quiz
   title: string
   questionCount: number
-  rawData: object                       ← JSON brut original (tel que reçu)
+  rawData: object                       ← JSON brut original + imageUrl par question si uploadée
   creeA: Timestamp
 ```
+
+**Note v2.2 :** `rawData.questions[n].imageUrl` contient l'URL Cloudinary CDN ou `null`.
 
 **Opérations Firestore (firestore.js) :**
 
@@ -453,7 +483,7 @@ quizzes/{quizId}                        ← bibliothèque de quiz
 | `soumettreReponse(...)` | getDoc + updateDoc | Merge réponse + recalcule score |
 | `abonnerJoueurs(codeS, cb)` | onSnapshot (collection) | Liste joueurs temps réel |
 | `abonnerQuizzes(cb)` | onSnapshot + query | Liste quiz temps réel, tri creeA desc |
-| `ajouterQuiz(raw, title, count)` | addDoc | Stocke JSON brut complet |
+| `ajouterQuiz(raw, title, count)` | addDoc | Stocke JSON brut complet (avec imageUrl) |
 | `chargerQuizParId(id)` | getDoc | Retourne `{ id, rawData, ... }` |
 | `supprimerQuiz(id)` | deleteDoc | Supprime quiz bibliothèque |
 
@@ -485,11 +515,14 @@ quizzes/{quizId}                        ← bibliothèque de quiz
       "question": "Texte avec **gras** et *italique* ?",
       "options": ["Réponse A", "Réponse B", "Réponse C", "Réponse D"],
       "correctIndex": 0,
-      "explanation": "Explication didactique.\n- Point 1\n- Point 2"
+      "explanation": "Explication didactique.\n- Point 1\n- Point 2",
+      "imageUrl": "https://res.cloudinary.com/dfaiu57aj/image/upload/v.../qcm-v2/xxx.jpg"
     }
   ]
 }
 ```
+
+**Champ `imageUrl` (v2.2) :** URL Cloudinary CDN ou `null` si pas d'image.
 
 ### Nouveau format NotebookLM/Claude (généré par le prompt builder)
 
@@ -509,7 +542,8 @@ quizzes/{quizId}                        ← bibliothèque de quiz
         "D": "Réponse D"
       },
       "bonne_reponse": "A",
-      "pourquoi": "Explication.\n- Point clé 1"
+      "pourquoi": "Explication.\n- Point clé 1",
+      "imageUrl": null
     }
   ]
 }
@@ -520,6 +554,7 @@ quizzes/{quizId}                        ← bibliothèque de quiz
 - `options` : objet `{A, B, C, D}` (pas un tableau)
 - `difficulte` : entier 1–5 → affiché en `category` comme `"Difficulté X/5"`
 - `pourquoi` → `explanation` ; `\n` dans les strings JSON = retour à la ligne
+- `imageUrl` : ajouté par l'admin avant save Firestore (v2.2), `null` si pas d'image
 - Markdown (`**gras**`, `*italique*`, `- liste`) supporté dans tous les champs texte
 
 ---
@@ -539,6 +574,7 @@ quizzes/{quizId}                        ← bibliothèque de quiz
       - correctIndex = ['A','B','C','D'].indexOf(bonne_reponse.toUpperCase())
       - category = difficulte ? `Difficulté ${difficulte}/5` : ''
       - explanation = pourquoi ?? ''
+      - imageUrl = q.imageUrl ?? null   ← v2.2
 ```
 
 **Stockage Firestore :** JSON brut original stocké (`rawData`). Normalisation côté client au chargement.
@@ -660,6 +696,52 @@ MdBlock (bloc) :
   - Chaque élément passe par renderInline()
 ```
 
+### 9.12 Upload image Cloudinary (`cloudinary.js`) — v2.2
+
+```javascript
+// src/lib/cloudinary.js
+const CLOUD_NAME = 'dfaiu57aj'
+const UPLOAD_PRESET = 'qcm_upload'  // mode Unsigned
+
+export async function uploadToCloudinary(file) {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('upload_preset', UPLOAD_PRESET)
+  formData.append('folder', 'qcm-v2')
+  const res = await fetch(
+    `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+    { method: 'POST', body: formData }
+  )
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error?.message || 'Upload Cloudinary échoué')
+  }
+  const data = await res.json()
+  return data.secure_url  // URL CDN permanente
+}
+```
+
+**Flux :** fichier sélectionné → `FormData` → POST Cloudinary → `secure_url` → stocké dans `questionImages[idx].url` → mergé dans `rawData` avant save Firestore.
+
+### 9.13 Auto-load meta header — fix App.jsx (v2.2)
+
+```
+Problème : abonnerQuizzes() initialisait selectedQuizId mais ne chargeait pas le quiz.
+→ Header affichait le titre AFSCA par défaut au lieu du quiz sélectionné.
+
+Fix dans le callback abonnerQuizzes :
+  setSelectedQuizId(prev => {
+    const id = prev ?? (list.length > 0 ? list[0].id : null)
+    if (!prev && id) {
+      chargerQuizParId(id).then(doc => {
+        if (doc?.rawData) setQuizData(normalizeQuiz(doc.rawData))
+      })
+    }
+    return id
+  })
+→ Premier chargement → chargerQuizParId() auto → meta mis à jour → Header correct.
+```
+
 ---
 
 ## 10. Configuration Firebase
@@ -685,7 +767,25 @@ const firebaseConfig = {
 
 ---
 
-## 11. Déploiement
+## 11. Configuration Cloudinary — v2.2
+
+**Console :** https://console.cloudinary.com/
+
+| Paramètre | Valeur |
+|-----------|--------|
+| Cloud name | `dfaiu57aj` |
+| Upload preset | `qcm_upload` |
+| Mode preset | Unsigned (upload direct depuis browser) |
+| Folder | `qcm-v2` |
+| Formats acceptés | image/* (jpg, png, webp, gif, svg…) |
+
+**URL API upload :** `https://api.cloudinary.com/v1_1/dfaiu57aj/image/upload`
+
+**Sécurité :** preset unsigned = accès public en écriture limité à ce preset. Adapté pour usage scolaire interne. En production exposée, passer en mode signed avec backend.
+
+---
+
+## 12. Déploiement
 
 ### Workflow GitHub Actions (`deploy.yml`)
 
@@ -700,13 +800,13 @@ const firebaseConfig = {
 
 | Action | Commande |
 |--------|----------|
-| Développement local | `npm run dev` |
+| Développement local | `npm run dev` (port 5174) |
 | Build production | `npm run build` |
 | Déploiement | `git push origin main` |
 
 ---
 
-## 12. Sécurité & administration
+## 13. Sécurité & administration
 
 ### Mot de passe admin
 
@@ -727,7 +827,7 @@ const firebaseConfig = {
 
 ---
 
-## 13. Règles Firestore
+## 14. Règles Firestore
 
 Règles à appliquer dans la Firebase Console :
 
@@ -755,7 +855,7 @@ service cloud.firestore {
 
 ---
 
-## 14. Thème visuel Kahoot!
+## 15. Thème visuel Kahoot!
 
 Les écrans de jeu actifs (LOBBY, QUIZ_LIVE, WAITING) utilisent un thème sombre inspiré de Kahoot!.
 
@@ -812,3 +912,6 @@ Initiale du prénom affichée dans un cercle coloré.
 | Seuil groupe défaut | 40% / 75% | `normalizeQuiz.js` |
 | Fond jeu sombre | `#46178F` | `App.jsx` (isDark) |
 | Fond header sombre | `#3b1278` | `Header.jsx` |
+| Cloudinary cloud | `dfaiu57aj` | `cloudinary.js` |
+| Cloudinary preset | `qcm_upload` (unsigned) | `cloudinary.js` |
+| Cloudinary folder | `qcm-v2` | `cloudinary.js` |
