@@ -12,6 +12,7 @@ import { ScreenReview } from './components/ScreenReview'
 import { ScreenDashboard } from './components/ScreenDashboard'
 import { ScreenPodium } from './components/ScreenPodium'
 import { ScreenAdmin } from './components/ScreenAdmin'
+import { ScreenSessionEnd } from './components/ScreenSessionEnd'
 import { Toast, useToast } from './components/Toast'
 import { useQuizStore } from './hooks/useQuizStore'
 import { useLiveQuiz } from './hooks/useLiveQuiz'
@@ -34,6 +35,7 @@ const S = {
   DASHBOARD: 'dashboard',
   PODIUM: 'podium',
   ADMIN: 'admin',
+  SESSION_END: 'session_end',
 }
 
 const ADMIN_PASSWORD = '1234'
@@ -68,6 +70,7 @@ export default function App() {
   const [livePlayers, setLivePlayers] = useState([])
   const [salon, setSalon] = useState(null)
   const [finalResult, setFinalResult] = useState(null)
+  const [questionsJouees, setQuestionsJouees] = useState(null)
   const [dernierReponse, setDernierReponse] = useState(null)
   const [leaderboard, setLeaderboard] = useState(loadLeaderboard)
   const [passInput, setPassInput] = useState('')
@@ -137,22 +140,10 @@ export default function App() {
         else setScreen(S.QUIZ_LIVE)
       }
     } else if (statut === 'termine') {
-      if (abandonne) {
-        // Session abandonnée prématurément par le professeur
-        showToast('⚠️ La session a été abandonnée par le professeur.')
-        setRoomId(null); quiz.reset(); setFinalResult(null)
-        setScreen(S.WELCOME)
-        return
-      }
-      const score = live.scoreActuel
-      const diff = Math.floor((new Date() - (quiz.startTime || new Date())) / 1000)
-      const m = String(Math.floor(diff / 60)).padStart(2, '0')
-      const s = String(diff % 60).padStart(2, '0')
-      const timeSpent = `${m}:${s}`
-      saveToLeaderboard(username, score, timeSpent, groups)
-      setLeaderboard(loadLeaderboard())
-      setFinalResult({ score, answers: live.reponsesFinales, timeSpent })
-      setScreen(S.RESULT)
+      showToast(abandonne ? '⛔ La session a été arrêtée.' : '✅ Session terminée !')
+      const jouees = Math.max(1, (live.salon.questionCourante ?? 0) + 1)
+      setQuestionsJouees(jouees)
+      setScreen(S.SESSION_END)
     }
   }, [live.salon])
 
@@ -199,6 +190,19 @@ export default function App() {
     if (!res) return
     setDernierReponse({ estCorrect: res.estCorrect, indice: live.indiceQuestion })
     setScreen(S.WAITING)
+  }
+
+  function handleSessionEndComplete() {
+    const total = questionsJouees ?? questions.length
+    const score = live.scoreActuel
+    const diff = Math.floor((new Date() - (quiz.startTime || new Date())) / 1000)
+    const m = String(Math.floor(diff / 60)).padStart(2, '0')
+    const s = String(diff % 60).padStart(2, '0')
+    const timeSpent = `${m}:${s}`
+    saveToLeaderboard(username, score, timeSpent, groups)
+    setLeaderboard(loadLeaderboard())
+    setFinalResult({ score, answers: live.reponsesFinales, timeSpent, totalQuestions: total })
+    setScreen(S.RESULT)
   }
 
   // ── TEACHER ─────────────────────────────────────────────────────────────
@@ -328,7 +332,7 @@ export default function App() {
           <ScreenResult
             username={username}
             score={finalResult.score}
-            totalQuestions={questions.length}
+            totalQuestions={finalResult.totalQuestions ?? questions.length}
             timeSpent={finalResult.timeSpent}
             groups={groups}
             onRestart={handleRestart}
@@ -344,7 +348,7 @@ export default function App() {
           <ScreenDashboard
             roomCode={roomId}
             players={livePlayers}
-            totalQuestions={questions.length}
+            totalQuestions={finalResult.totalQuestions ?? questions.length}
             salon={salon}
             currentQuestion={questions[salon?.questionCourante] ?? null}
             currentCorrectIndex={questions[salon?.questionCourante]?.correctIndex ?? -1}
@@ -373,6 +377,9 @@ export default function App() {
             onQuizDeleted={id => setQuizList(prev => prev.filter(q => q.id !== id))}
             onBack={() => setScreen(S.WELCOME)}
           />
+        )}
+        {screen === S.SESSION_END && (
+          <ScreenSessionEnd onComplete={handleSessionEndComplete} />
         )}
       </main>
 
