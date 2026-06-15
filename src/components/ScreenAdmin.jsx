@@ -87,7 +87,7 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onQuizUpdate
   const [erreur, setErreur] = useState('')
   const [loading, setLoading] = useState(false)
   const [drag, setDrag] = useState(false)
-  const [success, setSuccess] = useState(false)
+  const [successMsg, setSuccessMsg] = useState('')
   const [deletingId, setDeletingId] = useState(null)
   const [loadingEditId, setLoadingEditId] = useState(null)
 
@@ -109,7 +109,7 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onQuizUpdate
   }
 
   function parseAndPreview(text) {
-    setErreur(''); setPreview(null); setSuccess(false); setQuestionImages({})
+    setErreur(''); setPreview(null); setSuccessMsg(''); setQuestionImages({})
     try {
       const raw = JSON.parse(text)
       const normalized = normalizeQuiz(raw)
@@ -204,7 +204,7 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onQuizUpdate
       setTexte(text)
       parseAndPreview(text)
       setEditingQuiz({ id: quiz.id })
-      setSuccess(false)
+      setSuccessMsg('')
       // Scroll to form
       setTimeout(() => {
         document.getElementById('quiz-form-section')?.scrollIntoView({ behavior: 'smooth' })
@@ -218,7 +218,7 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onQuizUpdate
 
   function handleCancelEdit() {
     setEditingQuiz(null)
-    setTexte(''); setPreview(null); setErreur(''); setSuccess(false); setQuestionImages({})
+    setTexte(''); setPreview(null); setErreur(''); setSuccessMsg(''); setQuestionImages({})
   }
 
   async function handleSauvegarder() {
@@ -242,7 +242,7 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onQuizUpdate
           preview.normalized.questions.length
         )
         onQuizUpdated?.({ id: editingQuiz.id, title: preview.normalized.meta.title, questionCount: preview.normalized.questions.length })
-        setSuccess(true)
+        setSuccessMsg('mis à jour')
         setEditingQuiz(null)
         setTexte(''); setPreview(null); setQuestionImages({})
       } else {
@@ -253,7 +253,7 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onQuizUpdate
           preview.normalized.questions.length
         )
         onQuizAdded({ id, title: preview.normalized.meta.title, questionCount: preview.normalized.questions.length })
-        setSuccess(true); setTexte(''); setPreview(null); setQuestionImages({})
+        setSuccessMsg('ajouté'); setTexte(''); setPreview(null); setQuestionImages({})
       }
     } catch (e) {
       setErreur('Erreur Firestore : ' + e.message)
@@ -464,9 +464,9 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onQuizUpdate
         </div>
 
         {erreur && <div className="bg-rose-50 border border-rose-100 rounded-xl px-4 py-3 text-sm text-rose-700 font-medium">⚠ {erreur}</div>}
-        {success && (
+        {successMsg && (
           <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3 text-sm text-emerald-700 font-bold">
-            ✓ Quiz {isEditing ? 'mis à jour' : 'ajouté'} dans la bibliothèque !
+            ✓ Quiz {successMsg} dans la bibliothèque !
           </div>
         )}
 
@@ -609,3 +609,4 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onQuizUpdate
     </div>
   )
 }
+
