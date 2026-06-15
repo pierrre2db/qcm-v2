@@ -11,6 +11,11 @@ function getGroupe(score) {
   return 'Expert'
 }
 
+/** Strip undefined values from any object before sending to Firestore. */
+function sanitize(obj) {
+  return JSON.parse(JSON.stringify(obj ?? {}))
+}
+
 // ── SALON ──────────────────────────────────────────────────────────────────
 
 export async function creerSalon(codeS, totalQuestions, quizId = null) {
@@ -131,7 +136,10 @@ export function abonnerQuizzes(callback) {
 export async function ajouterQuiz(rawData, title, questionCount) {
   if (!isFirebaseConfigured || !db) return null
   const ref = await addDoc(collection(db, 'quizzes'), {
-    title, questionCount, rawData, creeA: serverTimestamp()
+    title: title ?? 'Quiz',
+    questionCount: questionCount ?? 0,
+    rawData: sanitize(rawData),
+    creeA: serverTimestamp()
   })
   return ref.id
 }
@@ -147,7 +155,10 @@ export async function chargerQuizParId(id) {
 export async function mettreAJourQuiz(id, rawData, title, questionCount) {
   if (!isFirebaseConfigured || !db) return
   await updateDoc(doc(db, 'quizzes', id), {
-    rawData, title, questionCount, modifieA: serverTimestamp()
+    rawData: sanitize(rawData),
+    title: title ?? 'Quiz',
+    questionCount: questionCount ?? 0,
+    modifieA: serverTimestamp()
   })
 }
 
