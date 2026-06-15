@@ -391,6 +391,10 @@ export default function App() {
               setQuizList(prev => [{ id, title, questionCount }, ...prev])
               showToast('Quiz ajouté !')
             }}
+            onQuizUpdated={({ id, title, questionCount }) => {
+              setQuizList(prev => prev.map(q => q.id === id ? { ...q, title, questionCount } : q))
+              showToast('Quiz mis à jour !')
+            }}
             onQuizDeleted={id => setQuizList(prev => prev.filter(q => q.id !== id))}
             onBack={() => setScreen(S.WELCOME)}
           />
