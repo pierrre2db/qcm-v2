@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { normalizeQuiz } from '../lib/normalizeQuiz'
 import { uploadToCloudinary } from '../lib/cloudinary'
-import { ajouterQuiz, supprimerQuiz } from '../lib/firestore'
+import { ajouterQuiz, supprimerQuiz, chargerQuizParId, mettreAJourQuiz } from '../lib/firestore'
 
 function formatDate(ts) {
   if (!ts) return ''
@@ -45,6 +45,14 @@ Règles obligatoires :
 - Réponds UNIQUEMENT avec le JSON brut, sans balises Markdown \`\`\``
 }
 
+const QUESTION_TEMPLATE = {
+  difficulte: 3,
+  question: "Nouvelle question ?",
+  options: { A: "Option A", B: "Option B", C: "Option C", D: "Option D" },
+  bonne_reponse: "A",
+  pourquoi: "Explication de la bonne réponse."
+}
+
 const JSON_FORMAT_EXEMPLE = `{
   "titre_quiz": "Titre de mon quiz",
   "questions": [
@@ -64,7 +72,7 @@ const JSON_FORMAT_EXEMPLE = `{
   ]
 }`
 
-export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onBack }) {
+export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onQuizUpdated, onBack }) {
   const fileRef = useRef(null)
 
   // Prompt builder
@@ -73,7 +81,7 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onBack }) {
   const [promptCopied, setPromptCopied] = useState(false)
   const [showFormat, setShowFormat] = useState(false)
 
-  // Upload quiz JSON
+  // Upload/edit quiz JSON
   const [texte, setTexte] = useState('')
   const [preview, setPreview] = useState(null)
   const [erreur, setErreur] = useState('')
@@ -81,6 +89,10 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onBack }) {
   const [drag, setDrag] = useState(false)
   const [success, setSuccess] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
+  const [loadingEditId, setLoadingEditId] = useState(null)
+
+  // Edit mode: null = create mode, { id } = edit mode
+  const [editingQuiz, setEditingQuiz] = useState(null)
 
   // Images par question : { [questionIndex]: { url, uploading, error } }
   const [questionImages, setQuestionImages] = useState({})
@@ -147,25 +159,102 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onBack }) {
     })
   }
 
-  async function handleAjouter() {
+  // Add a blank question to current JSON
+  function handleAddQuestion() {
+    if (!preview) return
+    try {
+      const raw = JSON.parse(texte)
+      const newQ = { ...QUESTION_TEMPLATE, id: raw.questions.length + 1 }
+      raw.questions = [...raw.questions, newQ]
+      const newText = JSON.stringify(raw, null, 2)
+      setTexte(newText)
+      parseAndPreview(newText)
+    } catch (e) {
+      setErreur('Impossible d\'ajouter : JSON invalide.')
+    }
+  }
+
+  // Remove last question from current JSON
+  function handleRemoveQuestion() {
+    if (!preview || preview.raw.questions.length <= 1) return
+    try {
+      const raw = JSON.parse(texte)
+      raw.questions = raw.questions.slice(0, -1)
+      const newText = JSON.stringify(raw, null, 2)
+      setTexte(newText)
+      parseAndPreview(newText)
+      // Remove image for deleted question index
+      setQuestionImages(prev => {
+        const next = { ...prev }
+        delete next[raw.questions.length]
+        return next
+      })
+    } catch (e) {
+      setErreur('Impossible de supprimer : JSON invalide.')
+    }
+  }
+
+  // Load quiz into edit mode
+  async function handleEdit(quiz) {
+    setLoadingEditId(quiz.id)
+    try {
+      const data = await chargerQuizParId(quiz.id)
+      if (!data?.rawData) throw new Error('Données introuvables.')
+      const text = JSON.stringify(data.rawData, null, 2)
+      setTexte(text)
+      parseAndPreview(text)
+      setEditingQuiz({ id: quiz.id })
+      setSuccess(false)
+      // Scroll to form
+      setTimeout(() => {
+        document.getElementById('quiz-form-section')?.scrollIntoView({ behavior: 'smooth' })
+      }, 100)
+    } catch (e) {
+      setErreur('Erreur chargement quiz : ' + e.message)
+    } finally {
+      setLoadingEditId(null)
+    }
+  }
+
+  function handleCancelEdit() {
+    setEditingQuiz(null)
+    setTexte(''); setPreview(null); setErreur(''); setSuccess(false); setQuestionImages({})
+  }
+
+  async function handleSauvegarder() {
     if (!preview) return
     setLoading(true)
     try {
-      // Merge imageUrls into raw data before saving to Firestore
+      // Merge imageUrls into raw data
       const rawWithImages = {
         ...preview.raw,
         questions: preview.raw.questions.map((q, idx) => ({
           ...q,
-          imageUrl: questionImages[idx]?.url ?? null
+          imageUrl: questionImages[idx]?.url ?? q.imageUrl ?? null
         }))
       }
-      const id = await ajouterQuiz(
-        rawWithImages,
-        preview.normalized.meta.title,
-        preview.normalized.questions.length
-      )
-      onQuizAdded({ id, title: preview.normalized.meta.title, questionCount: preview.normalized.questions.length })
-      setSuccess(true); setTexte(''); setPreview(null); setQuestionImages({})
+      if (editingQuiz) {
+        // UPDATE existing quiz
+        await mettreAJourQuiz(
+          editingQuiz.id,
+          rawWithImages,
+          preview.normalized.meta.title,
+          preview.normalized.questions.length
+        )
+        onQuizUpdated?.({ id: editingQuiz.id, title: preview.normalized.meta.title, questionCount: preview.normalized.questions.length })
+        setSuccess(true)
+        setEditingQuiz(null)
+        setTexte(''); setPreview(null); setQuestionImages({})
+      } else {
+        // CREATE new quiz
+        const id = await ajouterQuiz(
+          rawWithImages,
+          preview.normalized.meta.title,
+          preview.normalized.questions.length
+        )
+        onQuizAdded({ id, title: preview.normalized.meta.title, questionCount: preview.normalized.questions.length })
+        setSuccess(true); setTexte(''); setPreview(null); setQuestionImages({})
+      }
     } catch (e) {
       setErreur('Erreur Firestore : ' + e.message)
     } finally {
@@ -181,6 +270,7 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onBack }) {
   }
 
   const prompt = buildPrompt(sujet, nombre)
+  const isEditing = !!editingQuiz
 
   return (
     <div className="space-y-6">
@@ -277,62 +367,108 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onBack }) {
         ) : (
           <div className="space-y-2">
             {quizList.map(q => (
-              <div key={q.id} className="flex items-center justify-between bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4">
+              <div key={q.id} className={`flex items-center justify-between border rounded-2xl px-5 py-4 transition ${editingQuiz?.id === q.id ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-100'}`}>
                 <div>
-                  <p className="font-bold text-slate-900">{q.title}</p>
+                  <p className="font-bold text-slate-900 flex items-center gap-2">
+                    {q.title}
+                    {editingQuiz?.id === q.id && <span className="text-xs font-semibold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">en cours d'édition</span>}
+                  </p>
                   <p className="text-xs text-slate-400">{q.questionCount} questions{q.creeA ? ` · ${formatDate(q.creeA)}` : ''}</p>
                 </div>
-                <button
-                  onClick={() => handleSupprimer(q.id)}
-                  disabled={deletingId === q.id}
-                  className="bg-rose-50 hover:bo-rose-100 text-rose-600 font-bold p-2.5 rounded-xl transition disabled:opacity-50"
-                  title="Supprimer"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
+                <div className="flex items-center gap-2">
+                  {/* Edit button */}
+                  <button
+                    onClick={() => handleEdit(q)}
+                    disabled={loadingEditId === q.id || !!deletingId}
+                    className="bg-amber-50 hover:bg-amber-100 text-amber-600 font-bold p-2.5 rounded-xl transition disabled:opacity-50"
+                    title="Modifier"
+                  >
+                    {loadingEditId === q.id ? (
+                      <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                      </svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    )}
+                  </button>
+                  {/* Delete button */}
+                  <button
+                    onClick={() => handleSupprimer(q.id)}
+                    disabled={deletingId === q.id || !!loadingEditId}
+                    className="bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold p-2.5 rounded-xl transition disabled:opacity-50"
+                    title="Supprimer"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* ── ADD QUIZ ── */}
-      <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-md space-y-5">
-        <h3 className="font-extrabold text-slate-900 text-lg">Ajouter un quiz</h3>
-        <p className="text-xs text-slate-500">Collez le JSON reçu de NotebookLM / Claude, ou glissez le fichier .json.</p>
-
-        <div
-          onDragOver={e => { e.preventDefault(); setDrag(true) }}
-          onDragLeave={() => setDrag(false)}
-          onDrop={handleDrop}
-          onClick={() => fileRef.current?.click()}
-          className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition
-            ${drag ? 'border-emerald-400 bg-emerald-50' : 'border-slate-200 hover:border-emerald-300 hover:bg-slate-50'}`}
-        >
-          <input ref={fileRef} type="file" accept=".json,application/json" className="hidden"
-            onChange={e => handleFile(e.target.files[0])} />
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-slate-300 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-          </svg>
-          <p className="font-semibold text-slate-500">Glissez un fichier .json</p>
-          <p className="text-xs text-slate-400 mt-1">ou cliquez pour parcourir</p>
+      {/* ── ADD / EDIT QUIZ ── */}
+      <div id="quiz-form-section" className={`bg-white p-6 rounded-3xl border shadow-md space-y-5 ${isEditing ? 'border-amber-200' : 'border-slate-100'}`}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-extrabold text-slate-900 text-lg">
+              {isEditing ? '✏️ Modifier le quiz' : 'Ajouter un quiz'}
+            </h3>
+            {!isEditing && <p className="text-xs text-slate-500">Collez le JSON reçu de NotebookLM / Claude, ou glissez le fichier .json.</p>}
+          </div>
+          {isEditing && (
+            <button
+              onClick={handleCancelEdit}
+              className="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2 px-4 rounded-xl text-sm transition"
+            >
+              Annuler
+            </button>
+          )}
         </div>
 
+        {!isEditing && (
+          <div
+            onDragOver={e => { e.preventDefault(); setDrag(true) }}
+            onDragLeave={() => setDrag(false)}
+            onDrop={handleDrop}
+            onClick={() => fileRef.current?.click()}
+            className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition
+              ${drag ? 'border-emerald-400 bg-emerald-50' : 'border-slate-200 hover:border-emerald-300 hover:bg-slate-50'}`}
+          >
+            <input ref={fileRef} type="file" accept=".json,application/json" className="hidden"
+              onChange={e => handleFile(e.target.files[0])} />
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-slate-300 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            <p className="font-semibold text-slate-500">Glissez un fichier .json</p>
+            <p className="text-xs text-slate-400 mt-1">ou cliquez pour parcourir</p>
+          </div>
+        )}
+
         <div className="space-y-1.5">
-          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Ou collez votre JSON</label>
+          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+            {isEditing ? 'JSON du quiz (modifiable)' : 'Ou collez votre JSON'}
+          </label>
           <textarea
             value={texte}
             onChange={handleTextChange}
-            rows={6}
+            rows={isEditing ? 12 : 6}
             placeholder='{"titre_quiz": "Mon Quiz", "questions": [...]}'
             className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-mono text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 resize-y transition"
           />
         </div>
 
         {erreur && <div className="bg-rose-50 border border-rose-100 rounded-xl px-4 py-3 text-sm text-rose-700 font-medium">⚠ {erreur}</div>}
-        {success && <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3 text-sm text-emerald-700 font-bold">✓ Quiz ajouté à la bibliothèque !</div>}
+        {success && (
+          <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3 text-sm text-emerald-700 font-bold">
+            ✓ Quiz {isEditing ? 'mis à jour' : 'ajouté'} dans la bibliothèque !
+          </div>
+        )}
 
         {preview && (
           <div className="space-y-4">
@@ -340,11 +476,36 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onBack }) {
             <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 space-y-2">
               <p className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Aperçu</p>
               <p className="font-extrabold text-slate-900">{preview.normalized.meta.title}</p>
-              <div className="flex gap-2 text-xs">
+              <div className="flex gap-2 text-xs flex-wrap">
                 <span className="bg-white border border-emerald-200 text-emerald-800 font-bold px-2.5 py-1 rounded-full">
                   {preview.normalized.questions.length} questions
                 </span>
               </div>
+            </div>
+
+            {/* Add / Remove question buttons */}
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={handleAddQuestion}
+                className="flex items-center gap-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold px-4 py-2.5 rounded-xl text-sm transition"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Ajouter une question
+              </button>
+              <button
+                type="button"
+                onClick={handleRemoveQuestion}
+                disabled={preview.normalized.questions.length <= 1}
+                className="flex items-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold px-4 py-2.5 rounded-xl text-sm transition disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                </svg>
+                Supprimer dernière
+              </button>
             </div>
 
             {/* Images par question */}
@@ -358,6 +519,9 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onBack }) {
 
               {preview.normalized.questions.map((q, idx) => {
                 const imgState = questionImages[idx]
+                // For edit mode, check existing imageUrl in raw data
+                const existingUrl = preview.raw.questions[idx]?.imageUrl
+                const displayUrl = imgState?.url ?? (imgState === undefined ? existingUrl : null)
                 return (
                   <div key={idx} className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex items-start gap-4">
                     {/* Question number */}
@@ -371,16 +535,25 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onBack }) {
 
                       {/* Image upload / preview */}
                       <div className="mt-3">
-                        {imgState?.url ? (
+                        {displayUrl ? (
                           <div className="flex items-center gap-3">
                             <img
-                              src={imgState.url}
+                              src={displayUrl}
                               alt=""
                               className="h-16 w-24 object-cover rounded-xl border border-slate-200"
                             />
                             <button
                               type="button"
-                              onClick={() => removeImage(idx)}
+                              onClick={() => {
+                                removeImage(idx)
+                                // Also clear from raw preview
+                                if (preview.raw.questions[idx]) {
+                                  const newRaw = JSON.parse(texte)
+                                  newRaw.questions[idx].imageUrl = null
+                                  const newText = JSON.stringify(newRaw, null, 2)
+                                  setTexte(newText)
+                                }
+                              }}
                               className="text-xs text-rose-500 hover:text-rose-700 font-semibold transition"
                             >
                               Supprimer
@@ -421,11 +594,16 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onBack }) {
         )}
 
         <button
-          onClick={handleAjouter}
+          onClick={handleSauvegarder}
           disabled={!preview || loading}
-          className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-2xl transition shadow-md"
+          className={`w-full disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-2xl transition shadow-md
+            ${isEditing ? 'bg-amber-500 hover:bg-amber-400' : 'bg-emerald-600 hover:bg-emerald-500'}`}
         >
-          {loading ? 'Sauvegarde...' : 'Ajouter à la bibliothèque →'}
+          {loading
+            ? 'Sauvegarde...'
+            : isEditing
+              ? '💾 Enregistrer les modifications →'
+              : 'Ajouter à la bibliothèque →'}
         </button>
       </div>
     </div>
