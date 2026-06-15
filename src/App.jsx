@@ -76,6 +76,7 @@ export default function App() {
   const [passInput, setPassInput] = useState('')
   const [passError, setPassError] = useState(false)
   const [showPassPrompt, setShowPassPrompt] = useState(false)
+  const [questionsJouees, setQuestionsJouees] = useState(null)
 
   const { message: toastMsg, show: showToast } = useToast()
   const quiz = useQuizStore(questions)
