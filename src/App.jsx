@@ -149,7 +149,7 @@ export default function App() {
       }
     } else if (statut === 'termine') {
       showToast(abandonne ? '⛔ La session a été arrêtée.' : '✅ Session terminée !')
-      const jouees = Math.max(1, (live.salon.questionCourante ?? 0) + 1)
+      const jouees = Math.min(Math.max(1, (live.salon.questionCourante ?? 0) + 1), live.salon.totalQuestions ?? questions.length)
       setQuestionsJouees(jouees)
       setScreen(S.SESSION_END)
     }
