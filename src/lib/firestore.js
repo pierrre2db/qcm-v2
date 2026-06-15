@@ -144,6 +144,13 @@ export async function chargerQuizParId(id) {
   } catch { return null }
 }
 
+export async function mettreAJourQuiz(id, rawData, title, questionCount) {
+  if (!isFirebaseConfigured || !db) return
+  await updateDoc(doc(db, 'quizzes', id), {
+    rawData, title, questionCount, modifieA: serverTimestamp()
+  })
+}
+
 export async function supprimerQuiz(id) {
   if (!isFirebaseConfigured || !db) return
   await deleteDoc(doc(db, 'quizzes', id))
