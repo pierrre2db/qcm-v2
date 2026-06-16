@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { normalizeQuiz } from '../lib/normalizeQuiz'
 import { uploadToCloudinary } from '../lib/cloudinary'
 import { ajouterQuiz, supprimerQuiz, chargerQuizParId, mettreAJourQuiz } from '../lib/firestore'
@@ -79,8 +79,11 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onQuizUpdate
   const [titreInput, setTitreInput] = useState(titreAccueil)
   const [settingsSaved, setSettingsSaved] = useState(false)
 
-  async function handleSauvegarderSettings() {
-    await onSauvegarderSettings?.({ titreAccueil: titreInput.trim() || 'À vos Téléphones / PC !' })
+  // Sync input when prop changes (e.g. on init)
+  useEffect(() => { setTitreInput(titreAccueil) }, [titreAccueil])
+
+  function handleSauvegarderSettings() {
+    onSauvegarderSettings?.({ titreAccueil: titreInput.trim() || 'À vos Téléphones / PC !' })
     setSettingsSaved(true)
     setTimeout(() => setSettingsSaved(false), 2000)
   }
