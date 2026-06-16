@@ -21,7 +21,8 @@ import {
   creerSalon, inscrireJoueur, lancerPartie,
   passerQuestionSuivante, terminerSalon, abandonnerSalon,
   abonnerSalon, abonnerJoueurs,
-  abonnerQuizzes, chargerQuizParId, lireRoom
+  abonnerQuizzes, chargerQuizParId, lireRoom,
+  lireSettings, sauvegarderSettings
 } from './lib/firestore'
 
 const S = {
@@ -78,6 +79,8 @@ export default function App() {
   const [showPassPrompt, setShowPassPrompt] = useState(false)
   const [questionsJouees, setQuestionsJouees] = useState(null)
 
+  const [titreAccueil, setTitreAccueil] = useState('À vos Téléphones / PC !')
+
   const { message: toastMsg, show: showToast } = useToast()
   const quiz = useQuizStore(questions)
   const live = useLiveQuiz(roomId, userId, questions)
@@ -88,6 +91,9 @@ export default function App() {
     const pid = sessionStorage.getItem('qcm_pid') || crypto.randomUUID()
     sessionStorage.setItem('qcm_pid', pid)
     setUserId(pid)
+
+    // Load app settings
+    lireSettings().then(s => { if (s.titreAccueil) setTitreAccueil(s.titreAccueil) })
 
     // Piste A: student arrives via ?room=CODE → pre-fetch room's quiz for header title
     // Skip default quiz load to avoid race condition overwriting correct title
@@ -326,6 +332,7 @@ export default function App() {
             onSelectSoloQuiz={handleSelectSoloQuiz}
             selectedLiveQuizId={selectedLiveQuizId}
             onSelectLiveQuiz={handleSelectLiveQuiz}
+            titreAccueil={titreAccueil}
           />
         )}
 
@@ -415,6 +422,12 @@ export default function App() {
             }}
             onQuizDeleted={id => setQuizList(prev => prev.filter(q => q.id !== id))}
             onBack={() => setScreen(S.WELCOME)}
+            titreAccueil={titreAccueil}
+            onSauvegarderSettings={async (settings) => {
+              await sauvegarderSettings(settings)
+              if (settings.titreAccueil !== undefined) setTitreAccueil(settings.titreAccueil)
+              showToast('Paramètres sauvegardés !')
+            }}
           />
         )}
         {screen === S.SESSION_END && (
