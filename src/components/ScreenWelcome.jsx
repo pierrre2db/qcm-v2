@@ -236,6 +236,16 @@ export function ScreenWelcome({ meta, onJoin, onCreateSession, leaderboard, onAd
         <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
           Concours d'Hygiène de Classe
         </h2>
+        {meta.title && (
+          <div className="flex items-center justify-center gap-2">
+            <span className="inline-flex items-center gap-1.5 bg-slate-900 text-white text-xs font-bold px-3 py-1.5 rounded-full">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-emerald-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+              {meta.title}
+            </span>
+          </div>
+        )}
         <p className="text-slate-500 max-md mx-auto text-sm">
           {isStudentView
             ? 'Rejoignez la session de votre classe.'
