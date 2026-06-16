@@ -88,11 +88,26 @@ export default function App() {
     const pid = sessionStorage.getItem('qcm_pid') || crypto.randomUUID()
     sessionStorage.setItem('qcm_pid', pid)
     setUserId(pid)
+
+    // Piste A: student arrives via ?room=CODE → pre-fetch room's quiz for header title
+    // Skip default quiz load to avoid race condition overwriting correct title
+    const roomParam = new URLSearchParams(window.location.search).get('room')
+    if (roomParam) {
+      lireRoom(roomParam).then(roomData => {
+        if (roomData?.quizId) {
+          chargerQuizParId(roomData.quizId).then(doc => {
+            if (doc?.rawData) setQuizData(normalizeQuiz(doc.rawData))
+          })
+        }
+      })
+    }
+
     const unsub = abonnerQuizzes(list => {
       setQuizList(list)
       setSelectedSoloQuizId(prev => {
         const id = prev ?? (list.length > 0 ? list[0].id : null)
-        if (!prev && id) {
+        if (!prev && id && !roomParam) {
+          // Teacher/solo view: load first quiz as default
           chargerQuizParId(id).then(doc => {
             if (doc?.rawData) setQuizData(normalizeQuiz(doc.rawData))
           })
