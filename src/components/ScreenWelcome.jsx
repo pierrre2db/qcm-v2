@@ -11,7 +11,7 @@ function escapeHtml(text) {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }
 
-export function ScreenWelcome({ meta, onJoin, onCreateSession, leaderboard, onAdmin, quizList, selectedSoloQuizId, onSelectSoloQuiz, selectedLiveQuizId, onSelectLiveQuiz }) {
+export function ScreenWelcome({ meta, onJoin, onCreateSession, leaderboard, onAdmin, quizList, selectedSoloQuizId, onSelectSoloQuiz, selectedLiveQuizId, onSelectLiveQuiz, titreAccueil = 'À vos Téléphones / PC !' }) {
   const [username, setUsername] = useState('')
   const [roomCode, setRoomCode] = useState('')
   const [error, setError] = useState('')
@@ -234,7 +234,7 @@ export function ScreenWelcome({ meta, onJoin, onCreateSession, leaderboard, onAd
           {meta.badge}
         </span>
         <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
-          Concours d'Hygiène de Classe
+          {titreAccueil}
         </h2>
         {meta.title && (
           <div className="flex items-center justify-center gap-2">
