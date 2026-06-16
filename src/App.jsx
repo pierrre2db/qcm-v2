@@ -111,8 +111,10 @@ export default function App() {
     if (doc?.rawData) { setQuizData(normalizeQuiz(doc.rawData)); quiz.reset() }
   }
 
-  function handleSelectLiveQuiz(id) {
+  async function handleSelectLiveQuiz(id) {
     setSelectedLiveQuizId(id)
+    const doc = await chargerQuizParId(id)
+    if (doc?.rawData) setQuizData(normalizeQuiz(doc.rawData))
   }
 
   // ── Live subscriptions ──────────────────────────────────────────────────
