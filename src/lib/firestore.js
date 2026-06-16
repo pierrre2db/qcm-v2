@@ -167,6 +167,23 @@ export async function supprimerQuiz(id) {
   await deleteDoc(doc(db, 'quizzes', id))
 }
 
+// ── SETTINGS APP ──────────────────────────────────────────────────────────────
+
+const SETTINGS_DOC = () => doc(db, 'settings', 'app')
+
+export async function lireSettings() {
+  if (!isFirebaseConfigured || !db) return {}
+  try {
+    const snap = await getDoc(SETTINGS_DOC())
+    return snap.exists() ? snap.data() : {}
+  } catch { return {} }
+}
+
+export async function sauvegarderSettings(data) {
+  if (!isFirebaseConfigured || !db) return
+  await setDoc(SETTINGS_DOC(), data, { merge: true })
+}
+
 // ── LEGACY ─────────────────────────────────────────────────────────────────
 
 export async function registerPlayer(roomId, userId, username) {
