@@ -72,8 +72,18 @@ const JSON_FORMAT_EXEMPLE = `{
   ]
 }`
 
-export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onQuizUpdated, onBack }) {
+export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onQuizUpdated, onBack, titreAccueil = 'À vos Téléphones / PC !', onSauvegarderSettings }) {
   const fileRef = useRef(null)
+
+  // Settings
+  const [titreInput, setTitreInput] = useState(titreAccueil)
+  const [settingsSaved, setSettingsSaved] = useState(false)
+
+  async function handleSauvegarderSettings() {
+    await onSauvegarderSettings?.({ titreAccueil: titreInput.trim() || 'À vos Téléphones / PC !' })
+    setSettingsSaved(true)
+    setTimeout(() => setSettingsSaved(false), 2000)
+  }
 
   // Prompt builder
   const [sujet, setSujet] = useState('')
@@ -287,6 +297,34 @@ export function ScreenAdmin({ quizList, onQuizAdded, onQuizDeleted, onQuizUpdate
           </svg>
           <span>Retour</span>
         </button>
+      </div>
+
+      {/* ── PARAMÈTRES AFFICHAGE ── */}
+      <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-md space-y-4">
+        <div>
+          <h3 className="font-extrabold text-slate-900 text-lg">Paramètres d'affichage</h3>
+          <p className="text-xs text-slate-500 mt-0.5">Texte affiché en grand sur l'écran d'accueil projeté aux élèves.</p>
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Titre accueil</label>
+          <div className="flex gap-3">
+            <input
+              type="text"
+              value={titreInput}
+              onChange={e => setTitreInput(e.target.value)}
+              placeholder="À vos Téléphones / PC !"
+              className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition text-sm"
+            />
+            <button
+              onClick={handleSauvegarderSettings}
+              className={`font-bold py-2.5 px-5 rounded-xl text-sm transition whitespace-nowrap ${
+                settingsSaved ? 'bg-emerald-500 text-white' : 'bg-slate-900 hover:bg-slate-700 text-white'}`}
+            >
+              {settingsSaved ? '✓ Sauvegardé' : 'Sauvegarder'}
+            </button>
+          </div>
+          <p className="text-xs text-slate-400">Défaut : <span className="font-mono">À vos Téléphones / PC !</span></p>
+        </div>
       </div>
 
       {/* ── GENERATE WITH NOTEBOOKLM ── */}
