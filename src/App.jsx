@@ -419,9 +419,11 @@ export default function App() {
             onQuizDeleted={id => setQuizList(prev => prev.filter(q => q.id !== id))}
             onBack={() => setScreen(S.WELCOME)}
             titreAccueil={titreAccueil}
-            onSauvegarderSettings={async (settings) => {
-              await sauvegarderSettings(settings)
-              if (settings.titreAccueil !== undefined) setTitreAccueil(settings.titreAccueil)
+            onSauvegarderSettings={(settings) => {
+              if (settings.titreAccueil !== undefined) {
+                localStorage.setItem('qcm_titreAccueil', settings.titreAccueil)
+                setTitreAccueil(settings.titreAccueil)
+              }
               showToast('Paramètres sauvegardés !')
             }}
           />
